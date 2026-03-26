@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Juego de la Vibora</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: 'Segoe UI', sans-serif;
+      color: #eee;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      color: #4ecca3;
+      letter-spacing: 2px;
+    }
+
+    #score-board {
+      display: flex;
+      gap: 40px;
+      margin-bottom: 16px;
+      font-size: 1.1rem;
+    }
+
+    #score-board span {
+      background: #16213e;
+      padding: 6px 18px;
+      border-radius: 8px;
+      border: 1px solid #4ecca3;
+    }
+
+    #score-board b {
+      color: #4ecca3;
+    }
+
+    canvas {
+      background: #16213e;
+      border: 3px solid #4ecca3;
+      border-radius: 8px;
+      display: block;
+    }
+
+    #message {
+      margin-top: 18px;
+      font-size: 1.2rem;
+      min-height: 30px;
+      color: #f5a623;
+      letter-spacing: 1px;
+    }
+
+    #controls {
+      margin-top: 14px;
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      background: #4ecca3;
+      color: #1a1a2e;
+      border: none;
+      padding: 10px 28px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #38b28e;
+    }
+
+    #instructions {
+      margin-top: 14px;
+      font-size: 0.85rem;
+      color: #888;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Vibora</h1>
+
+  <div id="score-board">
+    <span>Puntos: <b id="score">0</b></span>
+    <span>Record: <b id="best">0</b></span>
+    <span>Nivel: <b id="level">1</b></span>
+  </div>
+
+  <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+  <div id="message">Presiona INICIO para jugar</div>
+
+  <div id="controls">
+    <button id="startBtn">Inicio</button>
+    <button id="pauseBtn" disabled>Pausa</button>
+  </div>
+
+  <div id="instructions">
+    Mueve la vibora con las flechas del teclado o WASD
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const CELL = 20;
+    const COLS = canvas.width / CELL;
+    const ROWS = canvas.height / CELL;
+
+    const scoreEl = document.getElementById('score');
+    const bestEl = document.getElementById('best');
+    const levelEl = document.getElementById('level');
+    const msgEl = document.getElementById('message');
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+
+    let snake, dir, nextDir, food, score, best, level, gameLoop, paused, running;
+
+    best = parseInt(localStorage.getItem('snakeBest') || '0');
+    bestEl.textContent = best;
+
+    function init() {
+      snake = [
+        { x: 10, y: 10 },
+        { x: 9,  y: 10 },
+        { x: 8,  y: 10 },
+      ];
+      dir = { x: 1, y: 0 };
+      nextDir = { x: 1, y: 0 };
+      score = 0;
+      level = 1;
+      paused = false;
+      scoreEl.textContent = 0;
+      levelEl.textContent = 1;
+      msgEl.textContent = '';
+      placeFood();
+    }
+
+    function placeFood() {
+      let pos;
+      do {
+        pos = {
+          x: Math.floor(Math.random() * COLS),
+          y: Math.floor(Math.random() * ROWS),
+        };
+      } while (snake.some(s => s.x === pos.x && s.y === pos.y));
+      food = pos;
+    }
+
+    function getSpeed() {
+      return Math.max(80, 200 - (level - 1) * 20);
+    }
+
+    function startGame() {
+      if (gameLoop) clearInterval(gameLoop);
+      init();
+      running = true;
+      startBtn.textContent = 'Reiniciar';
+      pauseBtn.disabled = false;
+      gameLoop = setInterval(step, getSpeed());
+    }
+
+    function step() {
+      dir = { ...nextDir };
+
+      const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+      // Wall collision
+      if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) {
+        return endGame();
+      }
+
+      // Self collision
+      if (snake.some(s => s.x === head.x && s.y === head.y)) {
+        return endGame();
+      }
+
+      snake.unshift(head);
+
+      if (head.x === food.x && head.y === food.y) {
+        score++;
+        scoreEl.textContent = score;
+
+        if (score > best) {
+          best = score;
+          bestEl.textContent = best;
+          localStorage.setItem('snakeBest', best);
+        }
+
+        level = Math.floor(score / 5) + 1;
+        levelEl.textContent = level;
+
+        placeFood();
+        clearInterval(gameLoop);
+        gameLoop = setInterval(step, getSpeed());
+      } else {
+        snake.pop();
+      }
+
+      draw();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Grid (subtle)
+      ctx.strokeStyle = '#1e2d50';
+      ctx.lineWidth = 0.5;
+      for (let i = 0; i <= COLS; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * CELL, 0);
+        ctx.lineTo(i * CELL, canvas.height);
+        ctx.stroke();
+      }
+      for (let j = 0; j <= ROWS; j++) {
+        ctx.beginPath();
+        ctx.moveTo(0, j * CELL);
+        ctx.lineTo(canvas.width, j * CELL);
+        ctx.stroke();
+      }
+
+      // Food
+      ctx.fillStyle = '#f5a623';
+      ctx.beginPath();
+      ctx.arc(
+        food.x * CELL + CELL / 2,
+        food.y * CELL + CELL / 2,
+        CELL / 2 - 2,
+        0, Math.PI * 2
+      );
+      ctx.fill();
+
+      // Snake body
+      snake.forEach((seg, i) => {
+        const ratio = 1 - (i / snake.length) * 0.5;
+        ctx.fillStyle = i === 0
+          ? '#4ecca3'
+          : `rgba(78, 204, 163, ${ratio})`;
+        const pad = i === 0 ? 1 : 2;
+        ctx.beginPath();
+        ctx.roundRect(
+          seg.x * CELL + pad,
+          seg.y * CELL + pad,
+          CELL - pad * 2,
+          CELL - pad * 2,
+          i === 0 ? 4 : 3
+        );
+        ctx.fill();
+      });
+
+      // Eyes on head
+      const head = snake[0];
+      ctx.fillStyle = '#1a1a2e';
+      const eyeOffsets = getEyeOffsets();
+      eyeOffsets.forEach(([ex, ey]) => {
+        ctx.beginPath();
+        ctx.arc(
+          head.x * CELL + ex,
+          head.y * CELL + ey,
+          2, 0, Math.PI * 2
+        );
+        ctx.fill();
+      });
+    }
+
+    function getEyeOffsets() {
+      const c = CELL;
+      if (dir.x === 1)  return [[c - 5, 5], [c - 5, c - 5]];
+      if (dir.x === -1) return [[5, 5], [5, c - 5]];
+      if (dir.y === -1) return [[5, 5], [c - 5, 5]];
+      return [[5, c - 5], [c - 5, c - 5]];
+    }
+
+    function endGame() {
+      clearInterval(gameLoop);
+      running = false;
+      pauseBtn.disabled = true;
+      msgEl.textContent = `Fin del juego! Puntos: ${score}`;
+      startBtn.textContent = 'Jugar de nuevo';
+
+      // Draw game over overlay
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#f5a623';
+      ctx.font = 'bold 32px Segoe UI';
+      ctx.textAlign = 'center';
+      ctx.fillText('FIN DEL JUEGO', canvas.width / 2, canvas.height / 2 - 10);
+      ctx.font = '18px Segoe UI';
+      ctx.fillStyle = '#eee';
+      ctx.fillText(`Puntos: ${score}`, canvas.width / 2, canvas.height / 2 + 26);
+    }
+
+    function togglePause() {
+      if (!running) return;
+      paused = !paused;
+      if (paused) {
+        clearInterval(gameLoop);
+        pauseBtn.textContent = 'Continuar';
+        msgEl.textContent = 'Pausado';
+      } else {
+        gameLoop = setInterval(step, getSpeed());
+        pauseBtn.textContent = 'Pausa';
+        msgEl.textContent = '';
+      }
+    }
+
+    // Controls
+    document.addEventListener('keydown', e => {
+      switch (e.key) {
+        case 'ArrowUp':    case 'w': case 'W':
+          if (dir.y !== 1) nextDir = { x: 0, y: -1 }; break;
+        case 'ArrowDown':  case 's': case 'S':
+          if (dir.y !== -1) nextDir = { x: 0, y: 1 }; break;
+        case 'ArrowLeft':  case 'a': case 'A':
+          if (dir.x !== 1) nextDir = { x: -1, y: 0 }; break;
+        case 'ArrowRight': case 'd': case 'D':
+          if (dir.x !== -1) nextDir = { x: 1, y: 0 }; break;
+        case ' ':
+          e.preventDefault();
+          if (running) togglePause();
+          break;
+      }
+    });
+
+    startBtn.addEventListener('click', startGame);
+    pauseBtn.addEventListener('click', togglePause);
+
+    // Initial draw
+    ctx.fillStyle = '#16213e';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  </script>
+</body>
+</html>
