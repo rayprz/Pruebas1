@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="160" viewBox="0 0 260 160">
+  <!-- Celular con escudo y palomita, trazo dorado -->
+  <rect x="92" y="10" width="76" height="140" rx="12" fill="none"
+        stroke="#e8b96a" stroke-width="3.5"/>
+  <path d="M118 18 H 142" stroke="#e8b96a" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="130" cy="140" r="4" fill="none" stroke="#e8b96a" stroke-width="2.5"/>
+  <g stroke="#e8b96a" stroke-width="2.5" fill="none" stroke-linecap="round">
+    <path d="M104 40 H 134 M104 50 H 148 M104 60 H 126" opacity="0.8"/>
+  </g>
+  <path d="M130 70 C 142 76 154 78 162 78 C 162 104 152 122 130 132
+           C 108 122 98 104 98 78 C 106 78 118 76 130 70 Z"
+        fill="#155e63" stroke="#e8b96a" stroke-width="3.5" transform="translate(28,-6)"/>
+  <path d="M144 96 L 154 108 L 174 84" fill="none" stroke="#e8b96a"
+        stroke-width="5" stroke-linecap="round" stroke-linejoin="round"
+        transform="translate(4,4)"/>
+  <g fill="#e8b96a">
+    <circle cx="56" cy="58" r="2.5"/><circle cx="48" cy="92" r="2"/>
+    <circle cx="64" cy="120" r="2.5"/><circle cx="212" cy="132" r="2.5"/>
+    <circle cx="206" cy="40" r="2"/>
+  </g>
+</svg>

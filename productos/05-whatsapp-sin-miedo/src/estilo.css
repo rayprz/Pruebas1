@@ -1,0 +1,103 @@
+/* WhatsApp sin Miedo — paleta verde azulado de confianza */
+
+:root {
+  --primario: #155e63;
+  --acento: #c8742e;
+  --suave: #e7f1f0;
+  --borde: #c2d8d6;
+}
+
+@page portada { background: #155e63; }
+
+/* Lección paso a paso */
+
+.leccion {
+  page-break-inside: avoid;
+  background: #fffdf8;
+  border: 1pt solid #c2d8d6;
+  border-radius: 8pt;
+  padding: 4.5mm 6mm;
+  margin: 0 0 6mm 0;
+}
+
+.leccion h3 { font-size: 17pt; color: #155e63; margin: 0 0 1mm 0; }
+
+.leccion .para-que {
+  font-size: 11pt;
+  color: #c8742e;
+  font-style: italic;
+  margin: 0 0 2.5mm 0;
+}
+
+.leccion ol {
+  margin: 0;
+  padding-left: 7mm;
+  font-size: 12.5pt;
+  line-height: 1.55;
+}
+
+.leccion ol li { padding: 1mm 0; }
+.leccion b { color: #155e63; }
+
+.tip {
+  background: #e7f1f0;
+  border-radius: 6pt;
+  padding: 2.5mm 4mm;
+  font-size: 11.5pt;
+  margin-top: 3mm;
+}
+.tip strong { color: #155e63; }
+
+/* Tarjeta de estafa */
+
+.estafa {
+  page-break-inside: avoid;
+  background: #fffdf8;
+  border: 1.2pt solid #d8b5a0;
+  border-radius: 8pt;
+  padding: 4.5mm 6mm;
+  margin: 0 0 6mm 0;
+}
+
+.estafa h3 { font-size: 16.5pt; color: #8c2f1b; margin: 0 0 2mm 0; }
+
+.estafa .asi { font-size: 12pt; margin: 1.5mm 0; line-height: 1.55; }
+.estafa .asi b { color: #8c2f1b; }
+
+.defensa {
+  background: #e7f1f0;
+  border-left: 4pt solid #155e63;
+  border-radius: 0 6pt 6pt 0;
+  padding: 3mm 4mm;
+  font-size: 12pt;
+  margin-top: 2.5mm;
+}
+.defensa strong { color: #155e63; }
+
+/* Regla de oro grande */
+
+.regla-oro {
+  page-break-inside: avoid;
+  margin: 0 0 4.5mm 0;
+  padding-left: 14mm;
+  position: relative;
+}
+
+.regla-oro .n {
+  position: absolute;
+  left: 0;
+  top: 1mm;
+  width: 10mm;
+  height: 10mm;
+  border-radius: 50%;
+  background: #155e63;
+  color: #fdf3e3;
+  font-family: "DejaVu Serif", serif;
+  font-size: 14pt;
+  font-weight: bold;
+  text-align: center;
+  line-height: 10mm;
+}
+
+.regla-oro h4 { font-size: 14pt; color: #155e63; margin: 0 0 1mm 0; }
+.regla-oro p { font-size: 12pt; margin: 0; line-height: 1.5; }
