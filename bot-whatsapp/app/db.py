@@ -32,6 +32,7 @@ def init() -> None:
         CREATE TABLE IF NOT EXISTS pagos(
             payment_id TEXT PRIMARY KEY,
             wa_id      TEXT,
+            producto   TEXT DEFAULT 'recetario',
             monto      REAL,
             estado     TEXT,
             entregado  INTEGER DEFAULT 0,
@@ -92,17 +93,28 @@ def historial(wa_id: str, limite: int = 20) -> list[dict]:
     return [{"role": f["rol"], "content": f["contenido"]} for f in reversed(filas)]
 
 
-def registrar_pago(payment_id: str, wa_id: str, monto: float, estado: str) -> bool:
+def registrar_pago(payment_id: str, wa_id: str, monto: float, estado: str,
+                   producto: str = "recetario") -> bool:
     """Devuelve True si el pago es nuevo (no se había registrado)."""
     with _conn() as c:
         try:
             c.execute(
-                "INSERT INTO pagos(payment_id, wa_id, monto, estado, ts) VALUES(?,?,?,?,?)",
-                (payment_id, wa_id, monto, estado, time.time()),
+                "INSERT INTO pagos(payment_id, wa_id, producto, monto, estado, ts)"
+                " VALUES(?,?,?,?,?,?)",
+                (payment_id, wa_id, producto, monto, estado, time.time()),
             )
             return True
         except sqlite3.IntegrityError:
             return False
+
+
+def productos_comprados(wa_id: str) -> list[str]:
+    with _conn() as c:
+        filas = c.execute(
+            "SELECT DISTINCT producto FROM pagos WHERE wa_id=? AND estado='approved'",
+            (wa_id,),
+        ).fetchall()
+    return [f["producto"] for f in filas]
 
 
 def pago_entregado(payment_id: str) -> None:

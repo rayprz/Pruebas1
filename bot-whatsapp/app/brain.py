@@ -18,23 +18,46 @@ def _cliente_api() -> anthropic.Anthropic:
     return _client
 
 
+_CATALOGO_TXT = "\n".join(
+    f'- "{pid}": {p["nombre"]} — ${p["precio"]:.0f} MXN.'
+    for pid, p in config.CATALOGO.items()
+)
+
 SYSTEM_BASE = f"""Eres Lupita, la asistente de "{config.MARCA}", una tiendita \
 digital mexicana que vende recetarios y guías en PDF para personas adultas, \
 muchas de ellas mayores de 60 años. Atiendes el WhatsApp del negocio.
 
-PRODUCTO QUE VENDES HOY
+EL PRODUCTO ESTRELLA (el de los anuncios)
 - {config.PRODUCTO}: {config.PRODUCTO_DETALLE}
-- Precio: ${config.PRECIO_MXN:.0f} pesos mexicanos, pago único.
-- Es un archivo PDF DIGITAL (no es libro físico, no se envía por paquetería).
-  Llega aquí mismo por WhatsApp, al instante, en cuanto se confirma el pago.
-  Se puede leer en el celular, guardar para siempre e imprimir si gustan.
-- Formas de pago: tarjeta, transferencia SPEI o efectivo en OXXO, todo a
-  través de un link seguro de Mercado Pago que tú generas con tu herramienta.
-- Garantía: si no le encanta, devolvemos el dinero completo dentro de los
-  primeros 7 días, sin preguntas.
-- Muy pronto habrá más productos (sopas de letras con letra gigante, menús
-  para cuidar el azúcar, devocional). Solo menciónalo si ya compraron o
-  preguntan qué más hay; puedes ofrecer avisarles cuando salgan.
+- Precio: ${config.CATALOGO['recetario']['precio']:.0f} pesos mexicanos, pago único.
+
+EL CATÁLOGO COMPLETO (id: producto — precio)
+{_CATALOGO_TXT}
+- "sopas": 100 sopas de letras con letra GIGANTE, temas bonitos de antes,
+  con soluciones. Ideal para ejercitar la mente sin forzar la vista.
+- "cocina-cuida": 4 semanas de menús y 20 recetas mexicanas bajitas en
+  azúcar y sal, para quienes cuidan el azúcar y la presión. NO es
+  tratamiento médico y así debes decirlo si preguntan.
+- "devocional": 30 días de lectura, reflexión y oración con letra grande,
+  más las oraciones de toda la vida.
+- "whatsapp": guía paciente para usar WhatsApp paso a paso + cómo
+  reconocer las 10 estafas más comunes. Buen regalo de hijos a padres.
+- "memorias": libro para que la persona escriba su historia a mano y la
+  herede a su familia. El regalo más emotivo del catálogo.
+
+REGLAS DEL CATÁLOGO
+- Todos son archivos PDF DIGITALES (no libros físicos, no hay paquetería).
+  Llegan aquí mismo por WhatsApp, al instante, al confirmarse el pago.
+  Se leen en el celular, se guardan para siempre y se pueden imprimir.
+- Formas de pago: tarjeta, transferencia SPEI o efectivo en OXXO, con link
+  seguro de Mercado Pago que tú generas con tu herramienta (uno por
+  producto: usa el id correcto).
+- Garantía en todo: si no le encanta, devolvemos el dinero completo dentro
+  de los primeros 7 días, sin preguntas.
+- Vende primero lo que el cliente vino a buscar. Ofrece OTRO producto solo
+  cuando venga al caso (ya compró, pregunta qué más hay, o menciona una
+  necesidad que otro producto resuelve mejor). Una sugerencia, no catálogo
+  entero de jalón.
 
 CÓMO HABLAS
 - En español de México, de usted, con calidez y paciencia. Tu clienta típica
@@ -80,11 +103,21 @@ TOOLS = [
         "name": "enviar_link_pago",
         "description": (
             "Genera y envía al cliente, por WhatsApp, su link personal de pago "
-            "de Mercado Pago (tarjeta, SPEI u OXXO). Úsala cuando el cliente "
-            "quiera comprar o pregunte cómo pagar. No repitas el link en tu "
-            "texto: ya se le envió en un mensaje aparte."
+            "de Mercado Pago (tarjeta, SPEI u OXXO) del producto indicado. "
+            "Úsala cuando el cliente quiera comprar o pregunte cómo pagar. "
+            "No repitas el link en tu texto: ya se le envió en un mensaje aparte."
         ),
-        "input_schema": {"type": "object", "properties": {}, "required": []},
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "producto": {
+                    "type": "string",
+                    "enum": list(config.CATALOGO.keys()),
+                    "description": "Id del producto que el cliente quiere comprar.",
+                }
+            },
+            "required": ["producto"],
+        },
     },
     {
         "name": "enviar_muestra",
@@ -119,9 +152,17 @@ TOOLS = [
 
 def _ejecutar_tool(nombre: str, args: dict, wa_id: str) -> str:
     if nombre == "enviar_link_pago":
-        link = payments.crear_link(wa_id)
-        whatsapp.send_text(wa_id, f"Aquí está su link de pago seguro 🌸\n{link}")
-        return "Link de pago enviado al cliente en un mensaje aparte."
+        producto = args.get("producto") or config.PRODUCTO_DEFAULT
+        if producto not in config.CATALOGO:
+            producto = config.PRODUCTO_DEFAULT
+        prod = config.CATALOGO[producto]
+        link = payments.crear_link(wa_id, producto)
+        whatsapp.send_text(
+            wa_id,
+            f"Aquí está su link de pago seguro de {prod['nombre']} "
+            f"(${prod['precio']:.0f}) 🌸\n{link}",
+        )
+        return f"Link de pago de '{producto}' enviado al cliente en un mensaje aparte."
 
     if nombre == "enviar_muestra":
         for i in (1, 2, 3):
@@ -157,8 +198,9 @@ def _params_modelo() -> dict:
 def _estado_cliente(wa_id: str) -> str:
     fila = db.cliente(wa_id)
     nombre = (fila["nombre"] if fila else "") or "desconocido"
-    pagado = bool(fila and fila["pagado"])
-    estado = "YA PAGÓ y ya se le entregó su PDF" if pagado else "todavía NO ha pagado"
+    comprados = db.productos_comprados(wa_id)
+    estado = (f"ya compró y se le entregó: {', '.join(comprados)}"
+              if comprados else "todavía no ha comprado nada")
     return (f"Estado actual de este cliente (fuente de verdad del sistema): "
             f"nombre: {nombre}; {estado}.")
 

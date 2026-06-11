@@ -27,8 +27,11 @@ def test_db():
         {"role": "user", "content": "hola"},
         {"role": "assistant", "content": "¡Hola! 🌸"},
     ], h
-    assert db.registrar_pago("p1", "521555", 99.0, "approved") is True
-    assert db.registrar_pago("p1", "521555", 99.0, "approved") is False  # idempotente
+    assert db.registrar_pago("p1", "521555", 99.0, "approved", "recetario") is True
+    assert db.registrar_pago("p1", "521555", 99.0, "approved", "recetario") is False
+    assert db.registrar_pago("p2", "521555", 79.0, "approved", "sopas") is True
+    assert db.productos_comprados("521555") == ["recetario", "sopas"] or \
+        set(db.productos_comprados("521555")) == {"recetario", "sopas"}
     db.marcar_pagado("521555")
     assert db.cliente("521555")["pagado"] == 1
     db.kv_set("media:x", "123")
@@ -55,7 +58,9 @@ def test_simulador_whatsapp():
 
 def test_estado_y_tools():
     estado = brain._estado_cliente("521555")
-    assert "YA PAGÓ" in estado, estado
+    assert "ya compró" in estado and "recetario" in estado, estado
+    salida = brain._ejecutar_tool("enviar_link_pago", {"producto": "devocional"}, "521555")
+    assert "devocional" in salida, salida
     salida = brain._ejecutar_tool("enviar_muestra", {}, "521555")
     assert "muestra" in salida.lower()
     salida = brain._ejecutar_tool("escalar_a_humano", {"motivo": "prueba"}, "521555")

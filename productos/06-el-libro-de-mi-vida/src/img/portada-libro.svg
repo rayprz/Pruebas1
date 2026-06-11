@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="160" viewBox="0 0 260 160">
+  <!-- Libro abierto con corazón y florecitas, trazo dorado -->
+  <g fill="none" stroke="#e8b96a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M130 48 C 112 36 84 34 62 40 L 62 116 C 84 110 112 112 130 124
+             C 148 112 176 110 198 116 L 198 40 C 176 34 148 36 130 48 Z"/>
+    <path d="M130 48 L 130 124"/>
+  </g>
+  <g stroke="#e8b96a" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.85">
+    <path d="M74 56 C 90 52 106 53 118 58 M74 70 C 90 66 106 67 118 72
+             M74 84 C 88 80 100 81 110 85"/>
+    <path d="M142 58 C 154 53 170 52 186 56 M142 72 C 154 67 170 66 186 70"/>
+  </g>
+  <path d="M164 86 C 161 81 154 81 154 86 C 154 90 160 93 164 97
+           C 168 93 174 90 174 86 C 174 81 167 81 164 86 Z" fill="#e8b96a"/>
+  <g fill="#e8b96a">
+    <circle cx="56" cy="138" r="3"/>
+    <circle cx="48" cy="133" r="1.8"/><circle cx="64" cy="133" r="1.8"/>
+    <circle cx="48" cy="143" r="1.8"/><circle cx="64" cy="143" r="1.8"/>
+    <circle cx="204" cy="138" r="3"/>
+    <circle cx="196" cy="133" r="1.8"/><circle cx="212" cy="133" r="1.8"/>
+    <circle cx="196" cy="143" r="1.8"/><circle cx="212" cy="143" r="1.8"/>
+    <circle cx="130" cy="16" r="2.6"/>
+    <circle cx="118" cy="22" r="1.7"/><circle cx="142" cy="22" r="1.7"/>
+  </g>
+</svg>

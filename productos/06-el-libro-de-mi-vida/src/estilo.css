@@ -1,0 +1,97 @@
+/* El Libro de Mi Vida — paleta vino/rosa antiguo con sepia */
+
+:root {
+  --primario: #7a3b4f;
+  --acento: #b08d3f;
+  --suave: #f6ecee;
+  --borde: #ddc6cc;
+}
+
+@page portada { background: #6e3344; }
+
+/* Pregunta con renglones para escribir a mano */
+
+.pregunta {
+  page-break-inside: avoid;
+  margin: 0 0 7mm 0;
+}
+
+.pregunta h4 {
+  font-size: 14pt;
+  color: #7a3b4f;
+  margin: 0 0 1mm 0;
+  font-family: "DejaVu Serif", serif;
+}
+
+.pregunta .pista {
+  font-size: 10.5pt;
+  color: #9a7c84;
+  font-style: italic;
+  margin: 0 0 1mm 0;
+}
+
+/* Página "pertenece a" */
+
+.pertenece {
+  page-break-after: always;
+  text-align: center;
+  padding-top: 70mm;
+}
+
+.pertenece p {
+  font-family: "DejaVu Serif", serif;
+  font-size: 16pt;
+  color: #7a3b4f;
+}
+
+.pertenece .linea-larga {
+  border-bottom: 1pt solid #b08d3f;
+  width: 120mm;
+  height: 12mm;
+  margin: 4mm auto;
+}
+
+.pertenece .fecha { font-size: 12pt; color: #9a7c84; margin-top: 10mm; }
+
+/* Carta para un ser querido */
+
+.carta-querida { page-break-before: always; padding-top: 4mm; }
+
+.carta-querida h3 {
+  font-size: 20pt;
+  color: #7a3b4f;
+  margin: 0 0 4mm 0;
+  text-align: center;
+}
+
+.carta-querida .para {
+  font-size: 14pt;
+  font-family: "DejaVu Serif", serif;
+  color: #4a3038;
+  margin-bottom: 2mm;
+}
+
+/* Marco para pegar fotografías */
+
+.marco-foto {
+  page-break-inside: avoid;
+  border: 1.4pt dashed #b08d3f;
+  border-radius: 6pt;
+  height: 92mm;
+  margin: 4mm 6mm 2mm 6mm;
+  text-align: center;
+  color: #c9aeb6;
+  font-size: 11pt;
+  padding-top: 40mm;
+}
+
+.pie-foto {
+  border-bottom: 0.9pt solid #c9b8a4;
+  height: 9mm;
+  margin: 0 6mm 8mm 6mm;
+}
+
+/* Árbol genealógico */
+
+.arbol { text-align: center; page-break-inside: avoid; }
+.arbol img, .arbol object { width: 175mm; }

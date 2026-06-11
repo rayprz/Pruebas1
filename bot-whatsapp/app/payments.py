@@ -18,17 +18,20 @@ def _headers() -> dict:
     return {"Authorization": f"Bearer {config.MP_ACCESS_TOKEN}"}
 
 
-def crear_link(wa_id: str) -> str:
+def crear_link(wa_id: str, producto_id: str | None = None) -> str:
+    producto_id = producto_id if producto_id in config.CATALOGO else config.PRODUCTO_DEFAULT
+    prod = config.CATALOGO[producto_id]
     if config.SIMULADOR:
-        return f"https://mpago.la/SIMULADO-{wa_id}"
+        return f"https://mpago.la/SIMULADO-{producto_id}-{wa_id}"
     payload = {
         "items": [{
-            "title": f"{config.PRODUCTO} — {config.MARCA}",
+            "title": f"{prod['nombre']} — {config.MARCA}",
             "quantity": 1,
-            "unit_price": config.PRECIO_MXN,
+            "unit_price": prod["precio"],
             "currency_id": config.MONEDA,
         }],
-        "external_reference": wa_id,
+        # wa_id|producto: al confirmarse el pago sabemos a quién y qué entregar
+        "external_reference": f"{wa_id}|{producto_id}",
         "statement_descriptor": "RINCONABUELA",
     }
     if config.PUBLIC_URL:

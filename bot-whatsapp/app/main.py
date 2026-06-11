@@ -160,16 +160,23 @@ async def webhook_mercadopago(request: Request):
     if pago.get("status") != "approved":
         return {"status": pago.get("status", "desconocido")}
 
-    wa_id = str(pago.get("external_reference") or "")
+    # external_reference = "wa_id|producto" (los links viejos traen solo wa_id)
+    referencia = str(pago.get("external_reference") or "")
+    wa_id, _, producto = referencia.partition("|")
+    if producto not in config.CATALOGO:
+        producto = config.PRODUCTO_DEFAULT
     monto = float(pago.get("transaction_amount") or 0)
 
-    if not db.registrar_pago(payment_id, wa_id, monto, "approved"):
+    if not db.registrar_pago(payment_id, wa_id, monto, "approved", producto):
         return {"status": "ya-procesado"}  # idempotencia: no entregar dos veces
 
     if wa_id:
-        _entregar_pdf(wa_id)
+        _entregar_pdf(wa_id, producto)
         db.marcar_pagado(wa_id)
-        whatsapp.notify_owner(f"💰 ¡Venta! ${monto:.0f} {config.MONEDA} — cliente {wa_id}")
+        whatsapp.notify_owner(
+            f"💰 ¡Venta! {config.CATALOGO[producto]['nombre']} — "
+            f"${monto:.0f} {config.MONEDA} — cliente {wa_id}"
+        )
     else:
         whatsapp.notify_owner(
             f"⚠️ Pago {payment_id} aprobado pero sin WhatsApp de referencia. "
@@ -179,20 +186,21 @@ async def webhook_mercadopago(request: Request):
     return {"status": "entregado"}
 
 
-def _entregar_pdf(wa_id: str) -> None:
+def _entregar_pdf(wa_id: str, producto: str = "recetario") -> None:
+    prod = config.CATALOGO.get(producto, config.CATALOGO[config.PRODUCTO_DEFAULT])
     try:
-        media_id = whatsapp.media_id_cacheado("recetario-pdf", config.PDF_PATH)
+        media_id = whatsapp.media_id_cacheado(f"pdf-{producto}", prod["pdf"])
         whatsapp.send_text(
             wa_id,
             "¡Su pago fue confirmado! 🎉 Muchísimas gracias por su compra. "
-            "Aquí le va su recetario; guárdelo, es suyo para siempre 🌸",
+            "Aquí le va su libro; guárdelo, es suyo para siempre 🌸",
         )
         whatsapp.send_document(
             wa_id, media_id,
-            filename="La Cocina de Antano - El Rincon de la Abuela.pdf",
-            caption="50 recetas tradicionales con letra grande. ¡Provecho!",
+            filename=prod["archivo"],
+            caption=prod["caption"],
         )
-        db.add_mensaje(wa_id, "assistant", "[pago confirmado: PDF entregado]")
+        db.add_mensaje(wa_id, "assistant", f"[pago confirmado: {producto} entregado]")
     except Exception as e:
         # Caso típico: pagó en OXXO >24 h después del último mensaje y la
         # ventana de WhatsApp se cerró. El dueño entrega a mano.

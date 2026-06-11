@@ -30,13 +30,17 @@ compradores reales.
 
 | # | Producto | Nicho | Precio MX | Precio USA | Estado |
 |---|----------|-------|-----------|------------|--------|
-| 1 | Recetario "La Cocina de Antaño" (~50 recetas tradicionales) | Cocina | $99 MXN | $5.99 USD | **En producción** |
-| 2 | Sopas de letras y juegos mentales letra GIGANTE (100+) | Juegos | $79 MXN | $4.99 USD | Pendiente (generable por código) |
-| 3 | Menús semanales y recetas para diabéticos e hipertensos | Salud | $149 MXN | $8.99 USD | Pendiente |
-| 4 | Devocional de 30 días + libro de oraciones | Fe | $99 MXN | $5.99 USD | Pendiente |
-| 5 | "WhatsApp sin miedo" + guía antifraudes digitales | Tecnología | $129 MXN | $7.99 USD | Pendiente |
-| 6 | "El libro de mi vida" (memorias para llenar) — se vende también a los hijos | Legado | $149 MXN | $8.99 USD | Pendiente |
+| 1 | "La Cocina de Antaño" — 50 recetas, 64 págs. ilustradas | Cocina | $99 MXN | $5.99 USD | ✅ **Listo** (`productos/01.../recetario.pdf`) |
+| 2 | "Sopas de Letras Gigantes" — 100 juegos + soluciones, 129 págs. | Juegos | $79 MXN | $4.99 USD | ✅ **Listo** (`productos/02.../sopas-de-letras.pdf`) |
+| 3 | "Cocina que Cuida" — 28 días de menús + 20 recetas bajas en azúcar/sal | Salud | $149 MXN | $8.99 USD | ✅ **Listo** (`productos/03.../cocina-que-cuida.pdf`) |
+| 4 | "Un Momento con Dios" — devocional 30 días + oraciones | Fe | $99 MXN | $5.99 USD | ✅ **Listo** (`productos/04.../un-momento-con-dios.pdf`) |
+| 5 | "WhatsApp sin Miedo" — 12 lecciones + guía antifraudes | Tecnología | $129 MXN | $7.99 USD | ✅ **Listo** (`productos/05.../whatsapp-sin-miedo.pdf`) |
+| 6 | "El Libro de Mi Vida" — memorias para llenar (regalo de hijos) | Legado | $149 MXN | $8.99 USD | ✅ **Listo** (`productos/06.../el-libro-de-mi-vida.pdf`) |
 | 7 | Guías de trámites (pensión MX / ciudadanía USA) | Trámites | — | — | Futuro (requiere mantenimiento) |
+
+El bot de WhatsApp ya conoce y vende el catálogo completo (link de pago y
+entrega automática por producto). Material de marketing en `marketing/`:
+landing de confianza, textos de anuncios y plantillas de Meta.
 
 Bundles: "2 por $149" / "3 por $199" como upsell inmediato post-compra.
 
@@ -83,14 +87,19 @@ bot-whatsapp/               ← bot vendedor 24/7 (FastAPI + Claude + Mercado Pa
 
 ## Siguientes pasos
 
-- [x] Producto 1: recetario (contenido + diseño + ilustraciones + PDF)
-- [x] Bot de WhatsApp: ventas, muestras, link de pago, entrega automática,
-      escalamiento a humano (ver `bot-whatsapp/README.md`)
-- [ ] Validación: mostrarlo a una lectora real del público objetivo
-- [ ] Cuentas: WhatsApp Business, Mercado Pago, Anthropic, hosting, Meta Ads
-- [ ] Desplegar el bot y hacer la primera venta de prueba (tarjeta propia)
-- [ ] Producto 2: generador de sopas de letras letra gigante (código)
-- [ ] Plantillas de Meta: entrega fuera de 24 h + seguimiento post-venta
-- [ ] Página simple de confianza (garantía, contacto) para enlazar en anuncios
+- [x] Productos 1–6: los seis PDFs del catálogo, terminados e ilustrados
+- [x] Bot de WhatsApp multi-producto: ventas, muestras, link de pago por
+      producto, entrega automática del PDF correcto, escalamiento a humano
+- [x] Página de confianza (`marketing/landing/`) — falta poner el número real
+- [x] Textos de anuncios listos para pegar (`marketing/anuncios.md`)
+- [x] Textos de plantillas de Meta (`marketing/plantillas-meta.md`)
+
+Pendiente (requiere al dueño):
+- [ ] Validación: enseñar el recetario a una lectora real (mamá) y ajustar
+- [ ] Abrir cuentas: WhatsApp Business (Meta), Mercado Pago, Anthropic, hosting
+- [ ] Desplegar el bot (guía en `bot-whatsapp/README.md`) y venta de prueba
+- [ ] Reemplazar `[WhatsApp del negocio]` en los PDFs (una línea en cada
+      cierre) y el número en la landing, cuando exista el número
+- [ ] Crear las 2 plantillas en WhatsApp Manager cuando haya cuenta
 - [ ] Primeros anuncios con presupuesto chico ($100–150 MXN/día) y medir
 
