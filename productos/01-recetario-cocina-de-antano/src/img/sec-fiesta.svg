@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="200" viewBox="0 0 260 200">
+  <!-- Fiesta: piñata de estrella -->
+  <path d="M130 0 L 130 40" stroke="#8a5a33" stroke-width="2.5"/>
+  <polygon points="120.7,77.2 139.3,77.2 130,40" fill="#1f5d8c"/>
+  <polygon points="165.9,110.1 160.2,92.4 198.5,89.8" fill="#b5532a"/>
+  <polygon points="158,134.6 142.9,145.6 172.3,170.2" fill="#6b8f4e"/>
+  <polygon points="102,134.6 117.1,145.6 87.7,170.2" fill="#c8742e"/>
+  <polygon points="99.8,92.4 94.1,110.1 61.5,89.8" fill="#b03425"/>
+  <g stroke-width="2.5" fill="none" stroke-linecap="round">
+    <path d="M198.5 89.8 C 210 84 208 96 218 92" stroke="#b5532a"/>
+    <path d="M172.3 170.2 C 182 178 172 180 180 188" stroke="#6b8f4e"/>
+    <path d="M87.7 170.2 C 78 178 88 180 80 188" stroke="#c8742e"/>
+    <path d="M61.5 89.8 C 50 84 52 96 42 92" stroke="#b03425"/>
+    <path d="M124 38 C 116 30 124 28 118 20" stroke="#1f5d8c"/>
+    <path d="M136 38 C 144 30 136 28 142 20" stroke="#1f5d8c"/>
+  </g>
+  <circle cx="130" cy="112" r="36" fill="#e8a13c"/>
+  <path d="M100 98 Q 130 88 160 98" fill="none" stroke="#1f5d8c"
+        stroke-width="7" stroke-linecap="round"/>
+  <path d="M98 122 Q 130 132 162 122" fill="none" stroke="#b03425"
+        stroke-width="7" stroke-linecap="round"/>
+  <g fill="#fdf3e3">
+    <circle cx="115" cy="110" r="2.6"/>
+    <circle cx="130" cy="112" r="2.6"/>
+    <circle cx="145" cy="110" r="2.6"/>
+  </g>
+  <g fill="#c8742e" opacity="0.85">
+    <circle cx="206" cy="132" r="2.4"/>
+    <circle cx="54" cy="130" r="2.4"/>
+    <circle cx="196" cy="56" r="2.4"/>
+    <circle cx="64" cy="54" r="2.4"/>
+  </g>
+</svg>

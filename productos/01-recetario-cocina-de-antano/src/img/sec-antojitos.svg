@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="200" viewBox="0 0 260 200">
+  <!-- Antojitos: elote con mayonesa y chilito, y su limón -->
+  <rect x="124" y="148" width="9" height="44" rx="4" fill="#8a5a33"/>
+  <path d="M96 60 C 96 28 162 28 162 60 L 162 120 C 162 152 96 152 96 120 Z"
+        fill="#e8c25a" stroke="#d8a93c" stroke-width="3"/>
+  <g fill="#f3d9ad">
+    <circle cx="111" cy="58" r="4.2"/><circle cx="129" cy="55" r="4.2"/><circle cx="147" cy="58" r="4.2"/>
+    <circle cx="105" cy="74" r="4.2"/><circle cx="121" cy="71" r="4.2"/><circle cx="137" cy="71" r="4.2"/><circle cx="153" cy="74" r="4.2"/>
+    <circle cx="111" cy="89" r="4.2"/><circle cx="129" cy="86" r="4.2"/><circle cx="147" cy="89" r="4.2"/>
+    <circle cx="105" cy="105" r="4.2"/><circle cx="121" cy="102" r="4.2"/><circle cx="137" cy="102" r="4.2"/><circle cx="153" cy="105" r="4.2"/>
+    <circle cx="111" cy="120" r="4.2"/><circle cx="129" cy="117" r="4.2"/><circle cx="147" cy="120" r="4.2"/>
+    <circle cx="121" cy="133" r="4.2"/><circle cx="137" cy="133" r="4.2"/>
+  </g>
+  <path d="M98 78 Q 113 90 129 80 Q 145 70 160 82" fill="none"
+        stroke="#fdf6ee" stroke-width="6" stroke-linecap="round"/>
+  <g fill="#b03425">
+    <circle cx="108" cy="80" r="2.2"/><circle cx="124" cy="84" r="2.2"/>
+    <circle cx="140" cy="76" r="2.2"/><circle cx="152" cy="81" r="2.2"/>
+    <circle cx="117" cy="96" r="2"/><circle cx="143" cy="93" r="2"/>
+  </g>
+  <path d="M104 142 C 84 150 74 168 78 184 C 94 178 104 164 110 148 Z"
+        fill="#6b8f4e" stroke="#557a40" stroke-width="2"/>
+  <path d="M154 142 C 174 150 184 168 180 184 C 164 178 154 164 148 148 Z"
+        fill="#6b8f4e" stroke="#557a40" stroke-width="2"/>
+  <path d="M196 174 A 22 22 0 0 1 240 174 Z" fill="#e9f0c8"
+        stroke="#6b8f4e" stroke-width="3"/>
+  <path d="M218 174 L 218 156 M 208 174 L 211 159 M 228 174 L 225 159"
+        stroke="#b9cc8a" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

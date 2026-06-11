@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="160" viewBox="0 0 260 160">
+  <!-- Cazuela humeante en trazo dorado, para la portada -->
+  <g stroke="#e8b96a" stroke-width="3" fill="none" stroke-linecap="round">
+    <path d="M105 44 C 99 34 109 30 105 18"/>
+    <path d="M130 48 C 123 36 137 32 131 16"/>
+    <path d="M155 44 C 149 34 159 30 155 18"/>
+  </g>
+  <path d="M58 66 C 58 108 90 126 130 126 C 170 126 202 108 202 66 Z"
+        fill="#a8442b" stroke="#e8b96a" stroke-width="3"/>
+  <ellipse cx="130" cy="66" rx="72" ry="13" fill="#8c2f1b"
+           stroke="#e8b96a" stroke-width="3"/>
+  <path d="M56 62 C 40 56 38 72 56 74" fill="none" stroke="#e8b96a"
+        stroke-width="3" stroke-linecap="round"/>
+  <path d="M204 62 C 220 56 222 72 204 74" fill="none" stroke="#e8b96a"
+        stroke-width="3" stroke-linecap="round"/>
+  <path d="M80 100 C 100 112 160 112 180 100" fill="none" stroke="#e8b96a"
+        stroke-width="2" stroke-dasharray="1 7" stroke-linecap="round"/>
+  <g fill="#e8b96a">
+    <circle cx="60" cy="148" r="3"/>
+    <circle cx="52" cy="143" r="1.8"/>
+    <circle cx="68" cy="143" r="1.8"/>
+    <circle cx="52" cy="153" r="1.8"/>
+    <circle cx="68" cy="153" r="1.8"/>
+    <circle cx="130" cy="150" r="3"/>
+    <circle cx="122" cy="145" r="1.8"/>
+    <circle cx="138" cy="145" r="1.8"/>
+    <circle cx="122" cy="155" r="1.8"/>
+    <circle cx="138" cy="155" r="1.8"/>
+    <circle cx="200" cy="148" r="3"/>
+    <circle cx="192" cy="143" r="1.8"/>
+    <circle cx="208" cy="143" r="1.8"/>
+    <circle cx="192" cy="153" r="1.8"/>
+    <circle cx="208" cy="153" r="1.8"/>
+  </g>
+</svg>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="200" viewBox="0 0 260 200">
+  <!-- Desayunos: comal con huevo estrellado y tortillas -->
+  <g stroke="#c9b8a4" stroke-width="3" fill="none" stroke-linecap="round">
+    <path d="M95 52 C 89 42 99 38 95 26"/>
+    <path d="M125 56 C 118 44 132 40 126 24"/>
+  </g>
+  <ellipse cx="112" cy="128" rx="92" ry="32" fill="#4f4a44"/>
+  <ellipse cx="112" cy="122" rx="92" ry="30" fill="#6b645c"/>
+  <ellipse cx="112" cy="122" rx="76" ry="23" fill="#7d766d"/>
+  <path d="M82 112 C 72 100 88 88 104 93 C 118 84 138 92 134 106
+           C 146 112 136 126 120 122 C 106 130 86 124 82 112 Z"
+        fill="#fdf6ee" stroke="#e3d4bd" stroke-width="2"/>
+  <circle cx="110" cy="106" r="12" fill="#e8a13c"/>
+  <circle cx="106" cy="102" r="3.5" fill="#f3d9ad"/>
+  <ellipse cx="216" cy="160" rx="40" ry="12" fill="#f3d9ad" stroke="#d8b97f" stroke-width="2"/>
+  <ellipse cx="216" cy="150" rx="40" ry="12" fill="#f7e3c0" stroke="#d8b97f" stroke-width="2"/>
+  <ellipse cx="216" cy="140" rx="40" ry="12" fill="#f3d9ad" stroke="#d8b97f" stroke-width="2"/>
+  <g fill="#c8742e" opacity="0.7">
+    <circle cx="201" cy="138" r="2.2"/>
+    <circle cx="222" cy="136" r="2.2"/>
+    <circle cx="234" cy="141" r="2.2"/>
+  </g>
+</svg>

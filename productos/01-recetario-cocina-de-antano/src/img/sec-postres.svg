@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="200" viewBox="0 0 260 200">
+  <!-- Postres: flan con su caramelo en plato -->
+  <ellipse cx="130" cy="160" rx="90" ry="19" fill="#f3d9ad" stroke="#d8b97f" stroke-width="2.5"/>
+  <ellipse cx="130" cy="156" rx="72" ry="13" fill="#fdf6ee"/>
+  <path d="M80 150 C 80 118 88 96 130 96 C 172 96 180 118 180 150
+           C 164 158 96 158 80 150 Z"
+        fill="#e8b25c" stroke="#d39a3e" stroke-width="3"/>
+  <ellipse cx="130" cy="99" rx="46" ry="11" fill="#9c5a18"/>
+  <path d="M94 104 C 90 116 88 126 94 130 C 100 132 101 124 99 112 Z" fill="#9c5a18"/>
+  <path d="M166 104 C 170 118 172 128 166 132 C 160 134 159 126 161 112 Z" fill="#9c5a18"/>
+  <path d="M128 108 C 127 118 127 124 131 126 C 135 126 134 116 132 108 Z" fill="#9c5a18"/>
+  <rect x="196" y="138" width="34" height="9" rx="4.5"
+        transform="rotate(-18 213 142)" fill="#8a5a33" stroke="#6e4626" stroke-width="2"/>
+  <g fill="#e8a13c">
+    <circle cx="62" cy="92" r="2.6"/>
+    <circle cx="200" cy="84" r="2.6"/>
+    <circle cx="76" cy="70" r="2"/>
+    <circle cx="186" cy="64" r="2"/>
+  </g>
+  <path d="M52 110 l 4 -8 l 4 8 l -8 0 Z" fill="#e8a13c" opacity="0.8"/>
+  <path d="M206 102 l 4 -8 l 4 8 l -8 0 Z" fill="#e8a13c" opacity="0.8"/>
+</svg>

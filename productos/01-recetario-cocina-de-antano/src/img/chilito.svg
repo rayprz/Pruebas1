@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+  <!-- Chilito para los títulos de receta -->
+  <path d="M17 9 C 28 10 34 19 30 28 C 26 36 15 38 11 31 C 16 30 14 22 14 15 Z"
+        fill="#b03425"/>
+  <path d="M14 15 C 14 22 16 30 11 31 C 9 27 10 19 14 15 Z"
+        fill="#8c2f1b" opacity="0.35"/>
+  <path d="M16 10 C 15 6 19 3 23 5" fill="none" stroke="#5e7d4a"
+        stroke-width="2.6" stroke-linecap="round"/>
+  <ellipse cx="17" cy="9.5" rx="4" ry="2.6" fill="#6b8f4e"/>
+</svg>

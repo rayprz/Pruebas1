@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="200" viewBox="0 0 260 200">
+  <!-- Guisados: cazuela ancha con pala de madera y jitomate -->
+  <g stroke="#c9b8a4" stroke-width="3.5" fill="none" stroke-linecap="round">
+    <path d="M105 50 C 98 40 110 36 104 22"/>
+    <path d="M140 54 C 133 42 147 38 141 20"/>
+  </g>
+  <path d="M196 18 L 168 80" stroke="#8a5a33" stroke-width="7" stroke-linecap="round"/>
+  <ellipse cx="200" cy="16" rx="9" ry="13" transform="rotate(24 200 16)"
+           fill="#8a5a33" stroke="#6e4626" stroke-width="2"/>
+  <path d="M38 96 C 44 142 84 162 130 162 C 176 162 216 142 222 96 Z"
+        fill="#b5532a" stroke="#8c2f1b" stroke-width="3"/>
+  <ellipse cx="130" cy="96" rx="92" ry="20" fill="#8c2f1b"/>
+  <ellipse cx="130" cy="94" rx="80" ry="15" fill="#b03425"/>
+  <g>
+    <rect x="100" y="88" width="9" height="9" rx="2" transform="rotate(14 104 92)" fill="#e8a13c"/>
+    <rect x="146" y="92" width="9" height="9" rx="2" transform="rotate(-12 150 96)" fill="#e8a13c"/>
+    <circle cx="128" cy="98" r="3.4" fill="#6b8f4e"/>
+    <circle cx="166" cy="92" r="3.4" fill="#6b8f4e"/>
+    <circle cx="90" cy="95" r="3.4" fill="#6b8f4e"/>
+  </g>
+  <path d="M58 136 C 70 146 190 146 202 136" fill="none"
+        stroke="#f3d9ad" stroke-width="5" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="42" cy="172" r="15" fill="#b03425"/>
+  <path d="M36 162 L 42 156 L 48 162" fill="none" stroke="#5e7d4a"
+        stroke-width="3" stroke-linecap="round"/>
+  <path d="M42 156 L 42 164" stroke="#5e7d4a" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="37" cy="168" r="3.5" fill="#c9543f" opacity="0.8"/>
+</svg>

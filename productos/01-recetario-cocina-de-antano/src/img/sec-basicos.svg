@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="200" viewBox="0 0 260 200">
+  <!-- Básicos: molcajete con salsa, tejolote y sus chiles -->
+  <path d="M58 96 C 58 138 88 158 130 158 C 172 158 202 138 202 96 Z"
+        fill="#7d7468" stroke="#5f574c" stroke-width="3"/>
+  <path d="M88 156 L 84 174 L 102 174 L 100 159 Z" fill="#5f574c"/>
+  <path d="M124 158 L 122 178 L 140 178 L 137 158 Z" fill="#5f574c"/>
+  <path d="M160 159 L 158 174 L 176 174 L 172 156 Z" fill="#5f574c"/>
+  <ellipse cx="130" cy="96" rx="74" ry="17" fill="#5f574c"/>
+  <ellipse cx="130" cy="94" rx="60" ry="12" fill="#8d8478"/>
+  <ellipse cx="128" cy="93" rx="46" ry="8.5" fill="#b03425"/>
+  <circle cx="170" cy="80" r="14" fill="#7d7468" stroke="#5f574c" stroke-width="3"/>
+  <g transform="translate(42,168) rotate(-14)">
+    <path d="M6 2 C 17 3 23 11 19 19 C 16 26 6 28 2 22 C 6 21 5 12 6 2 Z" fill="#b03425"/>
+    <path d="M5 3 C 4 -1 8 -4 12 -2" fill="none" stroke="#5e7d4a" stroke-width="2.4" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(206,170) rotate(16)">
+    <path d="M6 2 C 17 3 23 11 19 19 C 16 26 6 28 2 22 C 6 21 5 12 6 2 Z" fill="#557a40"/>
+    <path d="M5 3 C 4 -1 8 -4 12 -2" fill="none" stroke="#3f5c2e" stroke-width="2.4" stroke-linecap="round"/>
+  </g>
+  <circle cx="226" cy="120" r="12" fill="#b03425"/>
+  <path d="M221 112 L 226 107 L 231 112 M 226 107 L 226 114" fill="none"
+        stroke="#5e7d4a" stroke-width="2.6" stroke-linecap="round"/>
+</svg>
