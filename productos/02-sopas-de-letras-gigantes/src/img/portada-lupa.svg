@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="160" viewBox="0 0 260 160">
+  <!-- Lupa dorada sobre cuadrícula de letras -->
+  <g stroke="#e8b96a" stroke-width="2" opacity="0.85">
+    <path d="M40 30 H 220 M40 60 H 220 M40 90 H 220 M40 120 H 220" fill="none"/>
+    <path d="M70 10 V 140 M110 10 V 140 M150 10 V 140 M190 10 V 140" fill="none"/>
+  </g>
+  <g fill="#f3d9ad" font-family="DejaVu Sans" font-size="20" font-weight="bold" text-anchor="middle" opacity="0.9">
+    <text x="55" y="52">S</text><text x="90" y="52">O</text><text x="130" y="52">P</text><text x="170" y="52">A</text><text x="205" y="52">D</text>
+    <text x="55" y="82">L</text><text x="90" y="82">E</text><text x="130" y="82">T</text><text x="170" y="82">R</text><text x="205" y="82">A</text>
+    <text x="55" y="112">M</text><text x="90" y="112">B</text><text x="130" y="112">G</text><text x="170" y="112">N</text><text x="205" y="112">U</text>
+  </g>
+  <circle cx="118" cy="72" r="42" fill="none" stroke="#e8b96a" stroke-width="5"/>
+  <circle cx="118" cy="72" r="42" fill="#fdf3e3" opacity="0.12"/>
+  <path d="M148 102 L 182 136" stroke="#e8b96a" stroke-width="9" stroke-linecap="round"/>
+  <path d="M100 56 C 104 48 114 44 122 46" fill="none" stroke="#fdf3e3"
+        stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+</svg>

@@ -1,0 +1,106 @@
+/* Sopas de Letras Gigantes — paleta azul talavera con detalles cálidos */
+
+:root {
+  --primario: #1f5d8c;
+  --acento: #c8742e;
+  --suave: #eaf0f5;
+  --borde: #c5d3de;
+}
+
+@page portada { background: #1f5d8c; }
+
+/* Página de puzzle: una sopa por hoja, letra GIGANTE */
+
+.puzzle { page-break-after: always; text-align: center; }
+
+.puzzle h3 {
+  font-size: 19pt;
+  color: #1f5d8c;
+  margin: 0 0 4mm 0;
+}
+
+.puzzle h3 .num {
+  display: inline-block;
+  background: #c8742e;
+  color: #fdf3e3;
+  border-radius: 14pt;
+  padding: 1pt 12pt;
+  font-size: 13pt;
+  letter-spacing: 1pt;
+  margin-right: 4mm;
+  vertical-align: 2pt;
+}
+
+table.grande {
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+
+table.grande td {
+  width: 11.5mm;
+  height: 11.5mm;
+  text-align: center;
+  vertical-align: middle;
+  font-family: "DejaVu Sans";
+  font-size: 14.5pt;
+  font-weight: bold;
+  color: #2c3b46;
+  border: 0.7pt solid #b8c8d4;
+}
+
+.palabras {
+  margin: 4.5mm auto 0 auto;
+  width: 165mm;
+  text-align: center;
+}
+
+.palabras span {
+  display: inline-block;
+  font-size: 12.5pt;
+  font-weight: bold;
+  color: #1f5d8c;
+  background: #eaf0f5;
+  border: 0.8pt solid #c5d3de;
+  border-radius: 10pt;
+  padding: 0.5mm 4mm;
+  margin: 1mm 1.2mm;
+}
+
+/* Soluciones: cuatro por página, en miniatura */
+
+.sol-pagina { page-break-after: always; text-align: center; padding-top: 2mm; }
+
+.sol-celda {
+  display: inline-block;
+  width: 48%;
+  vertical-align: top;
+  margin: 1mm 0 4mm 0;
+}
+
+.sol-celda h4 {
+  font-size: 10pt;
+  color: #1f5d8c;
+  margin: 0 0 1.5mm 0;
+  font-family: "DejaVu Sans";
+}
+
+table.sol {
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+
+table.sol td {
+  width: 4.6mm;
+  height: 4.6mm;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 6.5pt;
+  color: #8b9aa5;
+  border: 0.3pt solid #d5dee5;
+}
+
+table.sol td.hit {
+  background: #f3d9ad;
+  color: #8c2f1b;
+  font-weight: bold;
+}

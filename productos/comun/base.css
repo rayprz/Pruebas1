@@ -1,0 +1,254 @@
+/* Base compartida de los libros de El Rincón de la Abuela.
+   Cada producto define su paleta en src/estilo.css con variables:
+   --primario  (títulos y portada)   --acento  (detalles)
+   --suave     (cajas con fondo)     --borde   (líneas suaves)        */
+
+@page {
+  size: letter;
+  margin: 17mm 15mm 19mm 15mm;
+  background: #fdf8f0;
+  @bottom-center {
+    content: "El Rincón de la Abuela  ·  pág. " counter(page);
+    font-family: "DejaVu Sans";
+    font-size: 9.5pt;
+    color: #9a6a4f;
+  }
+}
+
+@page portada {
+  margin: 0;
+  @bottom-center { content: none; }
+}
+
+@page divisor {
+  background: #fdf8f0;
+  @bottom-center { content: none; }
+}
+
+html { font-size: 12.5pt; }
+
+body {
+  font-family: "DejaVu Sans", sans-serif;
+  color: #3a2a20;
+  line-height: 1.55;
+  margin: 0;
+}
+
+h1, h2, h3, h4 { font-family: "DejaVu Serif", serif; }
+
+.salto { page-break-after: always; }
+
+/* ---------- Portada ---------- */
+
+.portada {
+  page: portada;
+  height: 279mm;
+  color: #fdf3e3;
+  text-align: center;
+  page-break-after: always;
+}
+
+.portada .marco {
+  margin: 14mm;
+  height: 251mm;
+  border: 2.5pt double #e8b96a;
+  padding: 0 12mm;
+}
+
+.portada .papel { display: block; width: 128mm; margin: 7mm auto 0 auto; }
+
+.portada .marca {
+  margin-top: 7mm;
+  font-size: 13pt;
+  letter-spacing: 4pt;
+  text-transform: uppercase;
+  color: #e8b96a;
+}
+
+.portada h1 {
+  font-size: 42pt;
+  line-height: 1.18;
+  margin: 9mm 0 7mm 0;
+  color: #fdf3e3;
+}
+
+.portada .subtitulo {
+  font-size: 15pt;
+  line-height: 1.5;
+  color: #f3d9ad;
+  margin: 0 4mm;
+}
+
+.portada .ilustracion { display: block; height: 48mm; margin: 9mm auto 0 auto; }
+
+.portada .sello {
+  margin-top: 9mm;
+  display: inline-block;
+  border: 1.2pt solid #e8b96a;
+  border-radius: 18pt;
+  padding: 3.5pt 16pt;
+  font-size: 11pt;
+  letter-spacing: 2pt;
+  text-transform: uppercase;
+  color: #e8b96a;
+}
+
+.portada .pie { margin-top: 10mm; font-size: 11.5pt; color: #f3d9ad; }
+
+/* ---------- Carta / introducción ---------- */
+
+.carta { page-break-after: always; padding-top: 6mm; }
+
+.carta h2 {
+  font-size: 24pt;
+  color: var(--primario, #8c2f1b);
+  margin-bottom: 2mm;
+}
+
+.carta p { font-size: 13pt; margin: 4.5mm 0; }
+
+.carta .firma {
+  font-family: "DejaVu Serif", serif;
+  font-style: italic;
+  font-size: 16pt;
+  color: var(--primario, #8c2f1b);
+  margin-top: 8mm;
+}
+
+.caja {
+  background: var(--suave, #f7e8cf);
+  border-left: 4pt solid var(--acento, #c8742e);
+  border-radius: 0 6pt 6pt 0;
+  padding: 4mm 5mm;
+  font-size: 12pt;
+  margin: 6mm 0;
+}
+
+.caja--centrada {
+  border: 1.2pt solid var(--acento, #c8742e);
+  border-left: 1.2pt solid var(--acento, #c8742e);
+  border-radius: 8pt;
+  text-align: center;
+}
+
+/* ---------- Índice ---------- */
+
+.indice { page-break-after: always; }
+
+.indice h2 {
+  font-size: 26pt;
+  color: var(--primario, #8c2f1b);
+  border-bottom: 2pt solid var(--acento, #c8742e);
+  padding-bottom: 2mm;
+}
+
+.indice h3 {
+  font-size: 14.5pt;
+  color: var(--acento, #1f5d8c);
+  margin: 6mm 0 1.5mm 0;
+  text-transform: uppercase;
+  letter-spacing: 1pt;
+}
+
+.indice ul { list-style: none; margin: 0; padding: 0; }
+.indice li { font-size: 11.5pt; padding: 0.9mm 0; }
+.indice a { text-decoration: none; color: #3a2a20; }
+.indice a::after {
+  content: leader(". ") " " target-counter(attr(href url), page);
+  color: #9a6a4f;
+}
+
+/* ---------- Divisor de sección ---------- */
+
+.divisor {
+  page: divisor;
+  page-break-before: always;
+  page-break-after: always;
+  text-align: center;
+  padding-top: 62mm;
+}
+
+.divisor .num {
+  font-family: "DejaVu Serif", serif;
+  font-size: 15pt;
+  letter-spacing: 3pt;
+  text-transform: uppercase;
+  color: var(--acento, #c8742e);
+}
+
+.divisor h2 {
+  font-size: 36pt;
+  color: var(--primario, #8c2f1b);
+  margin: 6mm 0;
+  line-height: 1.18;
+}
+
+.divisor .adorno {
+  font-size: 16pt;
+  color: var(--acento, #c8742e);
+  letter-spacing: 6pt;
+  margin: 4mm 0;
+}
+
+.divisor .dicho {
+  font-family: "DejaVu Serif", serif;
+  font-style: italic;
+  font-size: 14.5pt;
+  color: #6b4a35;
+  margin: 8mm 14mm 0 14mm;
+  line-height: 1.6;
+}
+
+/* ---------- Tarjeta de contenido genérica ---------- */
+
+.tarjeta {
+  page-break-inside: avoid;
+  background: #fffdf8;
+  border: 1pt solid var(--borde, #e3cfae);
+  border-radius: 8pt;
+  padding: 5mm 6mm 4mm 6mm;
+  margin: 0 0 7mm 0;
+}
+
+.tarjeta h3 {
+  font-size: 18pt;
+  color: var(--primario, #8c2f1b);
+  margin: 0 0 1mm 0;
+  line-height: 1.2;
+}
+
+.tarjeta .meta {
+  font-size: 10.5pt;
+  color: var(--acento, #1f5d8c);
+  text-transform: uppercase;
+  letter-spacing: 0.8pt;
+  margin: 0 0 3mm 0;
+  border-bottom: 0.8pt solid var(--borde, #e3cfae);
+  padding-bottom: 2mm;
+}
+
+/* ---------- Líneas para escribir (libros para llenar) ---------- */
+
+.lineas { margin: 2mm 0 4mm 0; }
+.lineas .linea {
+  border-bottom: 0.9pt solid #c9b8a4;
+  height: 9.5mm;
+}
+
+/* ---------- Página de cierre ---------- */
+
+.cierre { page-break-before: always; text-align: center; padding-top: 6mm; }
+.cierre h2 { font-size: 27pt; color: var(--primario, #8c2f1b); }
+.cierre .ilustracion { display: block; height: 40mm; margin: 0 auto 4mm auto; }
+.cierre p { font-size: 13pt; margin: 5mm 16mm; line-height: 1.65; }
+
+.cierre .garantia {
+  background: #fffdf8;
+  border: 1.2pt solid var(--acento, #c8742e);
+  border-radius: 8pt;
+  margin: 8mm 20mm;
+  padding: 5mm 7mm;
+  font-size: 12pt;
+}
+
+.cierre .legal { margin-top: 8mm; font-size: 9.5pt; color: #9a6a4f; }
