@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="160" viewBox="0 0 260 160">
+  <!-- Plato con verduras y corazoncito de vapor, trazo dorado -->
+  <g stroke="#e8b96a" stroke-width="3" fill="none" stroke-linecap="round">
+    <path d="M118 38 C 112 28 122 24 118 12"/>
+    <path d="M142 38 C 136 28 146 24 142 12"/>
+  </g>
+  <path d="M130 28 C 126 22 118 22 118 28 C 118 33 126 36 130 40
+           C 134 36 142 33 142 28 C 142 22 134 22 130 28 Z"
+        fill="#e8b96a" opacity="0.9"/>
+  <ellipse cx="130" cy="78" rx="78" ry="17" fill="none" stroke="#e8b96a" stroke-width="3"/>
+  <path d="M52 78 C 56 108 88 122 130 122 C 172 122 204 108 208 78"
+        fill="#3a6e54" stroke="#e8b96a" stroke-width="3"/>
+  <g stroke="#e8b96a" stroke-width="2.5" fill="none" stroke-linecap="round">
+    <circle cx="100" cy="76" r="9"/>
+    <path d="M96 70 L 100 65 L 104 70"/>
+    <ellipse cx="133" cy="79" rx="11" ry="7"/>
+    <path d="M158 72 C 166 66 174 70 172 78 C 170 84 160 84 158 78 Z"/>
+    <path d="M120 92 Q 130 98 140 92" opacity="0.8"/>
+  </g>
+  <g fill="#e8b96a">
+    <circle cx="68" cy="140" r="2.5"/><circle cx="130" cy="146" r="2.5"/>
+    <circle cx="192" cy="140" r="2.5"/>
+    <circle cx="99" cy="144" r="1.6"/><circle cx="161" cy="144" r="1.6"/>
+  </g>
+</svg>

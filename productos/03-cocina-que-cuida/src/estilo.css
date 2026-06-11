@@ -1,0 +1,127 @@
+/* Cocina que Cuida — paleta verde fresca con acentos cálidos */
+
+:root {
+  --primario: #2e6e4e;
+  --acento: #c8742e;
+  --suave: #e9f1e9;
+  --borde: #c9dac9;
+}
+
+@page portada { background: #2e5e46; }
+
+/* Tarjeta de día de menú */
+
+.dia {
+  page-break-inside: avoid;
+  background: #fffdf8;
+  border: 1pt solid #c9dac9;
+  border-radius: 8pt;
+  padding: 3.5mm 5mm 2.5mm 5mm;
+  margin: 0 0 4.5mm 0;
+}
+
+.dia h4 {
+  font-size: 13.5pt;
+  color: #2e6e4e;
+  margin: 0 0 1.5mm 0;
+  border-bottom: 0.8pt solid #c9dac9;
+  padding-bottom: 1mm;
+}
+
+.dia p { font-size: 11.5pt; margin: 1.2mm 0; line-height: 1.45; }
+.dia b { color: #c8742e; }
+
+.semana {
+  font-size: 19pt;
+  color: #2e6e4e;
+  margin: 6mm 0 4mm 0;
+  page-break-after: avoid;
+}
+
+/* Receta compacta */
+
+.receta-c {
+  page-break-inside: avoid;
+  background: #fffdf8;
+  border: 1pt solid #c9dac9;
+  border-radius: 8pt;
+  padding: 4mm 5.5mm 3mm 5.5mm;
+  margin: 0 0 6mm 0;
+}
+
+.receta-c h3 { font-size: 16.5pt; color: #2e6e4e; margin: 0 0 1mm 0; }
+
+.receta-c .meta {
+  font-size: 10pt;
+  color: #c8742e;
+  text-transform: uppercase;
+  letter-spacing: 0.8pt;
+  margin: 0 0 2.5mm 0;
+}
+
+.receta-c p { font-size: 11.5pt; margin: 1.5mm 0; line-height: 1.5; }
+.receta-c .ing { color: #4a4034; }
+.receta-c .ing b, .receta-c .prep b { color: #2e6e4e; }
+
+.toque {
+  background: #e9f1e9;
+  border-radius: 6pt;
+  padding: 2.5mm 4mm;
+  font-size: 11pt;
+  margin-top: 2.5mm;
+}
+.toque strong { color: #2e6e4e; }
+
+/* Tabla de cambios sencillos */
+
+table.cambios {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 4mm 0;
+  font-size: 12pt;
+}
+
+table.cambios th {
+  background: #2e6e4e;
+  color: #fdf3e3;
+  padding: 2.5mm 4mm;
+  text-align: left;
+  font-family: "DejaVu Serif", serif;
+}
+
+table.cambios td {
+  border: 0.8pt solid #c9dac9;
+  padding: 2.5mm 4mm;
+  background: #fffdf8;
+}
+
+table.cambios td:first-child { color: #8c2f1b; }
+table.cambios td:last-child { color: #2e6e4e; font-weight: bold; }
+
+/* Lista de reglas de oro */
+
+.regla {
+  page-break-inside: avoid;
+  margin: 0 0 4.5mm 0;
+  padding-left: 14mm;
+  position: relative;
+}
+
+.regla .n {
+  position: absolute;
+  left: 0;
+  top: 1mm;
+  width: 10mm;
+  height: 10mm;
+  border-radius: 50%;
+  background: #2e6e4e;
+  color: #fdf3e3;
+  font-family: "DejaVu Serif", serif;
+  font-size: 14pt;
+  font-weight: bold;
+  text-align: center;
+  line-height: 10mm;
+}
+
+.regla h4 { font-size: 14pt; color: #2e6e4e; margin: 0 0 1mm 0; }
+.regla p { font-size: 12pt; margin: 0; line-height: 1.5; }
