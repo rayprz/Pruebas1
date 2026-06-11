@@ -1,1 +1,4 @@
 productos/*/src/recetario.html
+bot-whatsapp/*.db
+bot-whatsapp/.env
+__pycache__/

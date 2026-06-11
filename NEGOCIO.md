@@ -73,17 +73,24 @@ Nicho descartado por decisión del dueño: tejido/bordado/manualidades.
 NEGOCIO.md                  ← este plan
 productos/
   01-recetario-cocina-de-antano/
-    src/                    ← fragmentos HTML del libro + estilos
+    src/                    ← fragmentos HTML del libro + estilos e ilustraciones
     build.py                ← genera el PDF con WeasyPrint
     recetario.pdf           ← producto final
+bot-whatsapp/               ← bot vendedor 24/7 (FastAPI + Claude + Mercado Pago)
+  README.md                 ← guía de cuentas, deploy y pruebas
+  app/                      ← webhook WhatsApp, cerebro, pagos, entrega del PDF
 ```
 
 ## Siguientes pasos
 
-- [x] Producto 1: recetario (contenido + diseño + PDF)
+- [x] Producto 1: recetario (contenido + diseño + ilustraciones + PDF)
+- [x] Bot de WhatsApp: ventas, muestras, link de pago, entrega automática,
+      escalamiento a humano (ver `bot-whatsapp/README.md`)
 - [ ] Validación: mostrarlo a una lectora real del público objetivo
-- [ ] Cuentas: WhatsApp Business, Mercado Pago, Stripe, Meta Ads
-- [ ] Bot de WhatsApp (API de Claude): guion de ventas, entrega, escalamiento
+- [ ] Cuentas: WhatsApp Business, Mercado Pago, Anthropic, hosting, Meta Ads
+- [ ] Desplegar el bot y hacer la primera venta de prueba (tarjeta propia)
 - [ ] Producto 2: generador de sopas de letras letra gigante (código)
+- [ ] Plantillas de Meta: entrega fuera de 24 h + seguimiento post-venta
 - [ ] Página simple de confianza (garantía, contacto) para enlazar en anuncios
 - [ ] Primeros anuncios con presupuesto chico ($100–150 MXN/día) y medir
+
