@@ -39,8 +39,16 @@ compradores reales.
 | 7 | Guías de trámites (pensión MX / ciudadanía USA) | Trámites | — | — | Futuro (requiere mantenimiento) |
 
 El bot de WhatsApp ya conoce y vende el catálogo completo (link de pago y
-entrega automática por producto). Material de marketing en `marketing/`:
-landing de confianza, textos de anuncios y plantillas de Meta.
+entrega automática por producto).
+
+**Marketing (en `marketing/`):** cada producto se anuncia por separado, con
+su propia campaña, audiencia y creativo — nunca como catálogo (una página
+con todo abarata la percepción). La estrategia maestra (funnel, economía,
+CAC objetivo/tope por producto, fases de lanzamiento, reglas de Meta) está
+en `marketing/estrategia.md`; el plan de cada producto (persona para
+Facebook, ángulo, diseño del anuncio, copys, pricing) en
+`marketing/productos/0X-*.md`. La landing (`marketing/landing/`) es solo
+del recetario, como respaldo de confianza.
 
 Bundles: "2 por $149" / "3 por $199" como upsell inmediato post-compra.
 
