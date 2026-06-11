@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="160" viewBox="0 0 260 160">
+  <!-- Paloma con ramito y resplandor, trazo dorado -->
+  <g stroke="#e8b96a" stroke-width="2" opacity="0.7">
+    <path d="M130 8 V 24 M86 18 L 96 32 M174 18 L 164 32 M58 44 L 72 52 M202 44 L 188 52" stroke-linecap="round"/>
+  </g>
+  <g fill="none" stroke="#e8b96a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M96 96 C 86 84 88 66 104 60 C 100 48 112 38 124 44 C 134 30 156 34 158 50
+             C 158 60 150 66 142 68 C 150 78 146 92 134 98 C 122 104 106 104 96 96 Z"/>
+    <path d="M118 64 C 128 58 142 60 148 70 C 140 78 126 78 118 72"/>
+    <path d="M96 96 C 84 104 72 106 60 102 C 68 112 84 116 98 110"/>
+    <path d="M158 52 L 176 46 L 164 58" fill="#e8b96a"/>
+  </g>
+  <circle cx="146" cy="48" r="2.6" fill="#e8b96a"/>
+  <g stroke="#e8b96a" stroke-width="2.5" fill="none" stroke-linecap="round">
+    <path d="M176 46 C 190 40 202 42 210 50"/>
+    <path d="M196 44 C 198 38 204 36 208 38 M204 50 C 208 46 214 46 216 50"/>
+  </g>
+  <g fill="#e8b96a">
+    <circle cx="70" cy="134" r="2.5"/><circle cx="130" cy="142" r="2.5"/>
+    <circle cx="190" cy="134" r="2.5"/>
+    <circle cx="100" cy="140" r="1.6"/><circle cx="160" cy="140" r="1.6"/>
+  </g>
+</svg>
