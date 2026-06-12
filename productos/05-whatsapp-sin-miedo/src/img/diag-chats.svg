@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="470" viewBox="0 0 320 470">
+<rect x="30" y="10" width="220" height="440" rx="22" fill="#fffdf8" stroke="#2c3b46" stroke-width="5"/>
+<path d="M115 22 H 165" stroke="#2c3b46" stroke-width="4" stroke-linecap="round"/>
+
+<rect x="35" y="36" width="210" height="44" fill="#155e63"/>
+<text x="48" y="64" font-family="DejaVu Sans" font-size="17" font-weight="bold" fill="#fdf3e3">WhatsApp</text>
+<circle cx="222" cy="58" r="11" fill="none" stroke="#fdf3e3" stroke-width="3"/>
+<path d="M230 66 L 238 74" stroke="#fdf3e3" stroke-width="3.5" stroke-linecap="round"/>
+<text x="40" y="98" font-family="DejaVu Sans" font-size="13" fill="#155e63" font-weight="bold">CHATS</text>
+<circle cx="62" cy="118" r="16" fill="#e7f1f0" stroke="#c2d8d6" stroke-width="2"/>
+<rect x="88" y="106" width="105" height="9" rx="4.5" fill="#d4dedd"/>
+<rect x="88" y="121" width="140" height="7" rx="3.5" fill="#e7f1f0"/><circle cx="62" cy="178" r="16" fill="#e7f1f0" stroke="#c2d8d6" stroke-width="2"/>
+<rect x="88" y="166" width="105" height="9" rx="4.5" fill="#d4dedd"/>
+<rect x="88" y="181" width="140" height="7" rx="3.5" fill="#e7f1f0"/><circle cx="62" cy="238" r="16" fill="#e7f1f0" stroke="#c2d8d6" stroke-width="2"/>
+<rect x="88" y="226" width="105" height="9" rx="4.5" fill="#d4dedd"/>
+<rect x="88" y="241" width="140" height="7" rx="3.5" fill="#e7f1f0"/>
+<path d="M252 74 C 268 80 272 96 264 108" fill="none" stroke="#c8742e" stroke-width="3"/>
+<path d="M264 108 L 258 98 M264 108 L 272 100" stroke="#c8742e" stroke-width="3" fill="none" stroke-linecap="round"/>
+<text x="190" y="128" font-family="DejaVu Sans" font-size="13.5" fill="#c8742e" font-weight="bold">La lupa:</text>
+<text x="190" y="144" font-family="DejaVu Sans" font-size="13.5" fill="#c8742e">para buscar</text>
+<text x="190" y="160" font-family="DejaVu Sans" font-size="13.5" fill="#c8742e">a una persona</text>
+<text x="46" y="300" font-family="DejaVu Sans" font-size="13.5" fill="#2c3b46">Cada renglón es una</text>
+<text x="46" y="317" font-family="DejaVu Sans" font-size="13.5" fill="#2c3b46">conversación. Tóquela</text>
+<text x="46" y="334" font-family="DejaVu Sans" font-size="13.5" fill="#2c3b46">para abrirla.</text>
+<path d="M70 285 L 62 252" stroke="#155e63" stroke-width="2.5" fill="none"/>
+<path d="M62 252 L 58 262 M62 252 L 69 260" stroke="#155e63" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+<rect x="35" y="396" width="210" height="49" rx="0" fill="#e7f1f0"/>
+<text x="140" y="425" font-family="DejaVu Sans" font-size="12.5" fill="#155e63" text-anchor="middle">Así se ve la pantalla principal</text>
+
+</svg>

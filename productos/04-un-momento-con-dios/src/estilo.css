@@ -11,7 +11,12 @@
 
 /* Página de día devocional */
 
-.dia-dev { page-break-after: always; padding-top: 4mm; }
+.dia-dev {
+  page-break-after: always;
+  padding-top: 17mm;
+  background: url("img/adorno-dia.svg") no-repeat top center;
+  background-size: 46mm auto;
+}
 
 .dia-dev .num-dia {
   font-family: "DejaVu Serif", serif;

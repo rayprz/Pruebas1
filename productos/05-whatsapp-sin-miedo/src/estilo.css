@@ -101,3 +101,20 @@
 
 .regla-oro h4 { font-size: 14pt; color: #155e63; margin: 0 0 1mm 0; }
 .regla-oro p { font-size: 12pt; margin: 0; line-height: 1.5; }
+
+/* Diagramas de pantalla */
+
+.diagrama {
+  page-break-inside: avoid;
+  text-align: center;
+  margin: 0 0 7mm 0;
+}
+
+.diagrama img { height: 105mm; }
+
+.diagrama .pie {
+  font-size: 10.5pt;
+  color: #155e63;
+  font-style: italic;
+  margin: 1mm 0 0 0;
+}

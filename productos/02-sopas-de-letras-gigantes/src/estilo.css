@@ -31,6 +31,12 @@
   vertical-align: 2pt;
 }
 
+.puzzle h3 .icono {
+  height: 9mm;
+  vertical-align: -2.5mm;
+  margin-right: 2mm;
+}
+
 table.grande {
   border-collapse: collapse;
   margin: 0 auto;

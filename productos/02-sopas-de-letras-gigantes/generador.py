@@ -94,6 +94,15 @@ TEMAS = {
 
 DIRECCIONES = [(0, 1), (1, 0), (1, 1)]  # derecha, abajo, diagonal
 
+ICONOS = {
+    "En la cocina": "cocina", "Frutas del mercado": "frutas",
+    "Flores de mi jardín": "flores", "Oficios de antes": "oficios",
+    "La familia": "familia", "Fiestas de México": "fiestas",
+    "El café y el pan dulce": "pan", "La naturaleza": "naturaleza",
+    "Nombres de mujer": "mujeres", "Nombres de hombre": "hombres",
+    "Lugares de México": "lugares", "En el mercado": "mercado",
+}
+
 
 def limpiar(palabra: str) -> str:
     """Mayúsculas y sin acentos, conservando la Ñ."""
@@ -158,7 +167,8 @@ def main() -> None:
         lista = "".join(f"<span>{limpiar(p)}</span>" for p in palabras)
         puzzles.append(
             f'<div class="puzzle">\n'
-            f'<h3><span class="num">Sopa {n}</span> {tema}</h3>\n'
+            f'<h3><span class="num">Sopa {n}</span>'
+            f'<img class="icono" src="img/t-{ICONOS[tema]}.svg" alt=""> {tema}</h3>\n'
             f'{html_tabla(grid, marcas, "grande")}\n'
             f'<div class="palabras">{lista}</div>\n'
             f"</div>"
