@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CATEGORY_LABELS, EQUIVALENCE_CLASSES, MODELS } from "@/data/catalog";
+import { MODELS } from "@/data/catalog";
 import {
   sizeSite,
   unitAnnualCost,
@@ -9,8 +9,10 @@ import {
   usdCompact,
 } from "@/lib/engine";
 import { useParams } from "@/lib/store";
+import { useCatalog } from "@/lib/catalogStore";
 import { useFleet } from "@/lib/fleetStore";
 import type { Category } from "@/lib/types";
+import { ModuleIntro } from "@/components/ModuleIntro";
 import {
   Card,
   NumberField,
@@ -23,22 +25,24 @@ import {
 const LOADER_CATS: Category[] = ["wheel-loader", "pit-loader", "excavator"];
 const TRUCK_CATS: Category[] = ["rigid-truck", "articulated-truck"];
 
-const loaderOptions = EQUIVALENCE_CLASSES.filter((c) => LOADER_CATS.includes(c.category)).map((c) => ({ value: c.id, label: c.name }));
-const truckOptions = EQUIVALENCE_CLASSES.filter((c) => TRUCK_CATS.includes(c.category)).map((c) => ({ value: c.id, label: c.name }));
-
 const refModel = (classId: string) =>
   MODELS.find((m) => m.classId === classId && m.source === "oem") ??
   MODELS.find((m) => m.classId === classId)!;
 
 export default function SitesPage() {
   const { params } = useParams();
+  const { classes, classById } = useCatalog();
   const { sites, units, updateSite } = useFleet();
   const [annualHoursPerUnit, setAnnualHoursPerUnit] = useState(5000);
   const [trucksPerLoader, setTrucksPerLoader] = useState(3);
 
-  const classById = useMemo(
-    () => new Map(EQUIVALENCE_CLASSES.map((c) => [c.id, c])),
-    []
+  const loaderOptions = useMemo(
+    () => classes.filter((c) => LOADER_CATS.includes(c.category)).map((c) => ({ value: c.id, label: c.name })),
+    [classes]
+  );
+  const truckOptions = useMemo(
+    () => classes.filter((c) => TRUCK_CATS.includes(c.category)).map((c) => ({ value: c.id, label: c.name })),
+    [classes]
   );
   const modelById = useMemo(() => new Map(MODELS.map((m) => [m.id, m])), []);
 
@@ -99,6 +103,14 @@ export default function SitesPage() {
       <PageHeader
         title="Sites & Production"
         subtitle="Right-size each work area to its production target, then compare against the fleet you actually run."
+      />
+
+      <ModuleIntro
+        id="sites"
+        purpose="Sizes the fleet each work area needs to hit its production target, and exposes the OPEX you waste running a non-optimal fleet."
+        edit="Per site: production tons/yr, haul distance, and the loader/truck classes. Plus the global hrs/yr and trucks-per-loader assumptions."
+        output="Recommended trucks & loaders vs. what you actually assign, and the resulting 'excess OPEX' per site and overall."
+        connects="Reads assigned units from My Fleet (match by site name) and costs from Catalog. Rename a site to match unit 'site' values."
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">

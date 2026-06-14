@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ParamsProvider } from "@/lib/store";
+import { CatalogProvider } from "@/lib/catalogStore";
 import { FleetProvider } from "@/lib/fleetStore";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
@@ -31,6 +32,7 @@ export default function RootLayout({
     >
       <body className="bg-canvas text-ink">
         <ParamsProvider>
+          <CatalogProvider>
           <FleetProvider>
             <div className="flex min-h-screen">
               <Sidebar />
@@ -42,6 +44,7 @@ export default function RootLayout({
               </div>
             </div>
           </FleetProvider>
+          </CatalogProvider>
         </ParamsProvider>
       </body>
     </html>

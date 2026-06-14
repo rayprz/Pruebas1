@@ -1,20 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { EQUIVALENCE_CLASSES, MODELS, CATEGORY_LABELS } from "@/data/catalog";
+import { useMemo, useRef, useState } from "react";
+import { MODELS, CATEGORY_LABELS } from "@/data/catalog";
 import {
   SCENARIOS,
   SCENARIO_LABELS,
   ageMaintenanceMultiplier,
   unitAnnualCost,
-  usd,
   usdCompact,
 } from "@/lib/engine";
 import { useParams } from "@/lib/store";
+import { useCatalog } from "@/lib/catalogStore";
 import { useFleet } from "@/lib/fleetStore";
+import { csvToUnits, downloadCsv, unitsToCsv } from "@/lib/csv";
 import type { FleetUnit, Scenario } from "@/lib/types";
 import { BrandBadge } from "@/components/BrandBadge";
 import { IconPlus, IconTrash } from "@/components/Icons";
+import { ModuleIntro } from "@/components/ModuleIntro";
 import {
   Button,
   Card,
@@ -23,39 +25,47 @@ import {
   Segmented,
   Select,
   StatCard,
-  StatusBadge,
   TextInput,
 } from "@/components/ui";
 
-const classOptions = EQUIVALENCE_CLASSES.map((c) => ({
-  value: c.id,
-  label: `${CATEGORY_LABELS[c.category]} · ${c.name}`,
-}));
+const TEMPLATE = `unitNo,classId,modelId,year,currentHours,annualHours,site,status
+HT-101,ht-777,cat-777g,2019,28000,5000,Limestone Quarry,active
+LD-201,pl-992,km-wa800,2021,16000,4500,Limestone Quarry,active`;
 
 export default function FleetPage() {
   const { params } = useParams();
-  const { units, addUnit, updateUnit, removeUnit, resetAll } = useFleet();
+  const { classById, classes } = useCatalog();
+  const { units, addUnit, updateUnit, removeUnit, replaceUnits, resetAll } = useFleet();
   const [scenario, setScenario] = useState<Scenario>("medium");
   const [adding, setAdding] = useState(false);
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const classById = useMemo(
-    () => new Map(EQUIVALENCE_CLASSES.map((c) => [c.id, c])),
-    []
-  );
   const modelById = useMemo(() => new Map(MODELS.map((m) => [m.id, m])), []);
 
-  const rows = useMemo(
-    () =>
-      units.map((u) => {
-        const cls = classById.get(u.classId)!;
-        const model =
-          modelById.get(u.modelId) ?? MODELS.find((m) => m.classId === u.classId)!;
-        const cost = unitAnnualCost(cls, model, scenario, u, params);
-        const lifePct = cls.lifeHours ? u.currentHours / cls.lifeHours : 0;
-        return { u, cls, model, cost, lifePct };
-      }),
-    [units, scenario, classById, modelById, params]
-  );
+  const { rows, invalid } = useMemo(() => {
+    const rows = [] as {
+      u: FleetUnit;
+      cls: NonNullable<ReturnType<typeof classById.get>>;
+      model: (typeof MODELS)[number];
+      cost: ReturnType<typeof unitAnnualCost>;
+      lifePct: number;
+    }[];
+    const invalid: FleetUnit[] = [];
+    for (const u of units) {
+      const cls = classById.get(u.classId);
+      if (!cls) {
+        invalid.push(u);
+        continue;
+      }
+      const model =
+        modelById.get(u.modelId) ?? MODELS.find((m) => m.classId === u.classId)!;
+      const cost = unitAnnualCost(cls, model, scenario, u, params);
+      const lifePct = cls.lifeHours ? u.currentHours / cls.lifeHours : 0;
+      rows.push({ u, cls, model, cost, lifePct });
+    }
+    return { rows, invalid };
+  }, [units, scenario, classById, modelById, params]);
 
   const totals = useMemo(() => {
     const operating = rows.reduce((s, r) => s + r.cost.operating, 0);
@@ -65,11 +75,30 @@ export default function FleetPage() {
     return { operating, owning, total: operating + owning, active, nearEol };
   }, [rows, units]);
 
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const { units: parsed, errors } = csvToUnits(text);
+    if (parsed.length) replaceUnits(parsed);
+    const unknown = parsed.filter((u) => !classById.get(u.classId)).length;
+    setImportMsg(
+      [
+        parsed.length ? `Imported ${parsed.length} units.` : "No rows imported.",
+        unknown ? `${unknown} have an unknown classId (see Catalog for valid ids).` : "",
+        errors.slice(0, 2).join(" "),
+      ]
+        .filter(Boolean)
+        .join(" ")
+    );
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
   return (
     <div>
       <PageHeader
         title="My Fleet"
-        subtitle="Unit-level registry. Hours and utilization drive age-adjusted operating cost and the CAPEX schedule."
+        subtitle="Your actual machines. Hours and utilization drive age-adjusted cost and the CAPEX schedule."
         actions={
           <>
             <Segmented
@@ -85,26 +114,36 @@ export default function FleetPage() {
         }
       />
 
+      <ModuleIntro
+        id="fleet"
+        purpose="A register of every machine you own or evaluate — the live data feed for the operational modules."
+        edit="Add/import units and edit their current hours, yearly hours, site and status. Import a CSV to load your whole fleet at once."
+        output="Per-unit annual cost (age-adjusted operating + owning) and flags for machines nearing end of life."
+        connects="Feeds CAPEX Planner (overhaul/replacement timing) and Sites & Production (current vs optimal fleet). Costs come from Catalog."
+      />
+
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Units" value={units.length} sub={`${totals.active} active`} />
-        <StatCard
-          label="Fleet OPEX / yr"
-          value={usdCompact(totals.operating)}
-          sub="fuel + maint + operator"
-          tone="accent"
-        />
-        <StatCard
-          label="Owning / yr"
-          value={usdCompact(totals.owning)}
-          sub="depreciation + capital + insurance"
-        />
-        <StatCard
-          label="Near end-of-life"
-          value={totals.nearEol}
-          sub="≥ 80% of life hours"
-          tone={totals.nearEol > 0 ? "danger" : "olive"}
-        />
+        <StatCard label="Fleet OPEX / yr" value={usdCompact(totals.operating)} sub="fuel + maint + operator" tone="accent" />
+        <StatCard label="Owning / yr" value={usdCompact(totals.owning)} sub="deprec. + capital + insurance" />
+        <StatCard label="Near end-of-life" value={totals.nearEol} sub="≥ 80% of life hours" tone={totals.nearEol > 0 ? "danger" : "olive"} />
       </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={onFile} className="hidden" />
+        <Button variant="ghost" onClick={() => fileRef.current?.click()}>Import CSV</Button>
+        <Button variant="ghost" onClick={() => downloadCsv("my-fleet.csv", unitsToCsv(units))}>Export CSV</Button>
+        <Button variant="ghost" onClick={() => downloadCsv("fleet-template.csv", TEMPLATE)}>Download template</Button>
+        {importMsg && <span className="text-xs text-inksoft">{importMsg}</span>}
+      </div>
+
+      {invalid.length > 0 && (
+        <div className="mb-4 rounded-xl border border-dangersoft bg-dangersoft/40 px-4 py-2 text-sm text-danger">
+          {invalid.length} unit(s) reference an unknown class and are not costed:{" "}
+          {invalid.map((u) => u.unitNo).join(", ")}. Fix the classId in your CSV
+          (valid ids are listed in Catalog) and re-import.
+        </div>
+      )}
 
       {adding && <AddUnitForm onClose={() => setAdding(false)} onAdd={addUnit} />}
 
@@ -130,7 +169,7 @@ export default function FleetPage() {
                 <tr key={u.id} className="border-b border-line/60 last:border-0 hover:bg-panel/50">
                   <td className="px-4 py-2 font-medium text-ink">
                     {u.unitNo}
-                    <span className="ml-1 text-xs text-inkfaint">'{String(u.year).slice(2)}</span>
+                    <span className="ml-1 text-xs text-inkfaint">&apos;{String(u.year).slice(2)}</span>
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex items-center gap-1.5">
@@ -138,53 +177,35 @@ export default function FleetPage() {
                       <span className="text-ink">{model.model}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-2 text-inksoft">{u.site}</td>
-                  <td className="px-4 py-2 text-right">
-                    <input
-                      type="number"
-                      value={u.currentHours}
-                      onChange={(e) => updateUnit(u.id, { currentHours: Number(e.target.value) })}
-                      className="w-20 rounded-md border border-line bg-card px-1.5 py-0.5 text-right tabular text-ink focus:border-accent focus:outline-none"
-                    />
+                  <td className="px-4 py-2">
+                    <TextInput value={u.site} onChange={(v) => updateUnit(u.id, { site: v })} className="w-36 !py-0.5" />
                   </td>
                   <td className="px-4 py-2 text-right">
-                    <span
-                      className={`tabular ${
-                        lifePct >= 0.8 ? "text-danger" : lifePct >= 0.5 ? "text-gold" : "text-inksoft"
-                      }`}
-                      title={`Maint × ${ageMaintenanceMultiplier(u.currentHours, cls.lifeHours).toFixed(2)} from ageing`}
-                    >
+                    <input type="number" value={u.currentHours} onChange={(e) => updateUnit(u.id, { currentHours: Number(e.target.value) })}
+                      className="w-20 rounded-md border border-line bg-card px-1.5 py-0.5 text-right tabular text-ink focus:border-accent focus:outline-none" />
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    <span className={`tabular ${lifePct >= 0.8 ? "text-danger" : lifePct >= 0.5 ? "text-gold" : "text-inksoft"}`}
+                      title={`Maint × ${ageMaintenanceMultiplier(u.currentHours, cls.lifeHours).toFixed(2)} from ageing`}>
                       {(lifePct * 100).toFixed(0)}%
                     </span>
                   </td>
                   <td className="px-4 py-2 text-right">
-                    <input
-                      type="number"
-                      value={u.annualHours}
-                      onChange={(e) => updateUnit(u.id, { annualHours: Number(e.target.value) })}
-                      className="w-16 rounded-md border border-line bg-card px-1.5 py-0.5 text-right tabular text-ink focus:border-accent focus:outline-none"
-                    />
+                    <input type="number" value={u.annualHours} onChange={(e) => updateUnit(u.id, { annualHours: Number(e.target.value) })}
+                      className="w-16 rounded-md border border-line bg-card px-1.5 py-0.5 text-right tabular text-ink focus:border-accent focus:outline-none" />
                   </td>
                   <td className="px-4 py-2 text-right tabular text-inksoft">{usdCompact(cost.operating)}</td>
                   <td className="px-4 py-2 text-right tabular font-semibold text-ink">{usdCompact(cost.total)}</td>
                   <td className="px-4 py-2">
-                    <Select
-                      value={u.status}
-                      onChange={(v) => updateUnit(u.id, { status: v as FleetUnit["status"] })}
+                    <Select value={u.status} onChange={(v) => updateUnit(u.id, { status: v as FleetUnit["status"] })}
                       options={[
                         { value: "active", label: "Active" },
                         { value: "standby", label: "Standby" },
                         { value: "down", label: "Down" },
-                      ]}
-                      className="!py-0.5"
-                    />
+                      ]} className="!py-0.5" />
                   </td>
                   <td className="px-4 py-2 text-right">
-                    <button
-                      onClick={() => removeUnit(u.id)}
-                      className="text-inkfaint hover:text-danger"
-                      title="Remove unit"
-                    >
+                    <button onClick={() => removeUnit(u.id)} className="text-inkfaint hover:text-danger" title="Remove unit">
                       <IconTrash width={16} height={16} />
                     </button>
                   </td>
@@ -193,7 +214,7 @@ export default function FleetPage() {
               {rows.length === 0 && (
                 <tr>
                   <td colSpan={10} className="px-4 py-10 text-center text-inkfaint">
-                    No units yet. Add one to start.
+                    No units yet. Add one, or import a CSV.
                   </td>
                 </tr>
               )}
@@ -203,26 +224,20 @@ export default function FleetPage() {
       </Card>
 
       <div className="mt-4 flex items-center justify-between text-xs text-inkfaint">
-        <p>
-          Total $/yr = age-adjusted operating + owning. Edit hours inline; values
-          recalc instantly and feed the CAPEX Planner.
-        </p>
-        <button onClick={resetAll} className="underline-offset-2 hover:text-ink hover:underline">
-          Reset sample fleet
-        </button>
+        <p>Total $/yr = age-adjusted operating + owning. Edit any field inline; everything recalcs and flows to CAPEX and Sites.</p>
+        <button onClick={resetAll} className="underline-offset-2 hover:text-ink hover:underline">Reset sample fleet</button>
       </div>
     </div>
   );
 }
 
-function AddUnitForm({
-  onClose,
-  onAdd,
-}: {
-  onClose: () => void;
-  onAdd: (u: FleetUnit) => void;
-}) {
-  const [classId, setClassId] = useState(EQUIVALENCE_CLASSES[0].id);
+function AddUnitForm({ onClose, onAdd }: { onClose: () => void; onAdd: (u: FleetUnit) => void }) {
+  const { classes } = useCatalog();
+  const classOptions = classes.map((c) => ({
+    value: c.id,
+    label: `${CATEGORY_LABELS[c.category]} · ${c.name}`,
+  }));
+  const [classId, setClassId] = useState(classes[0]?.id ?? "");
   const modelsForClass = MODELS.filter((m) => m.classId === classId);
   const [modelId, setModelId] = useState(modelsForClass[0]?.id ?? "");
   const [unitNo, setUnitNo] = useState("");
@@ -233,8 +248,7 @@ function AddUnitForm({
 
   const handleClass = (id: string) => {
     setClassId(id);
-    const first = MODELS.find((m) => m.classId === id);
-    setModelId(first?.id ?? "");
+    setModelId(MODELS.find((m) => m.classId === id)?.id ?? "");
   };
 
   const submit = () => {
@@ -261,12 +275,7 @@ function AddUnitForm({
         </label>
         <label className="space-y-1 text-sm">
           <span className="text-inksoft">Model / brand</span>
-          <Select
-            value={modelId}
-            onChange={setModelId}
-            options={modelsForClass.map((m) => ({ value: m.id, label: `${m.brand} ${m.model}` }))}
-            className="w-full"
-          />
+          <Select value={modelId} onChange={setModelId} options={modelsForClass.map((m) => ({ value: m.id, label: `${m.brand} ${m.model}` }))} className="w-full" />
         </label>
         <label className="space-y-1 text-sm">
           <span className="text-inksoft">Unit no.</span>

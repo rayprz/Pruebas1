@@ -11,19 +11,18 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { EQUIVALENCE_CLASSES, MODELS } from "@/data/catalog";
+import { MODELS } from "@/data/catalog";
 import { BASE_YEAR, CAPEX_HORIZON, useFleet } from "@/lib/fleetStore";
+import { useCatalog } from "@/lib/catalogStore";
 import { unitCapexEvents, usd, usdCompact, type CapexEvent } from "@/lib/engine";
 import { BrandBadge } from "@/components/BrandBadge";
+import { ModuleIntro } from "@/components/ModuleIntro";
 import { Card, PageHeader, SectionTitle, StatCard } from "@/components/ui";
 
 export default function CapexPage() {
   const { units } = useFleet();
+  const { classById } = useCatalog();
 
-  const classById = useMemo(
-    () => new Map(EQUIVALENCE_CLASSES.map((c) => [c.id, c])),
-    []
-  );
   const modelById = useMemo(() => new Map(MODELS.map((m) => [m.id, m])), []);
 
   const events = useMemo(() => {
@@ -71,6 +70,14 @@ export default function CapexPage() {
       <PageHeader
         title="CAPEX Planner"
         subtitle={`Projected overhaul & replacement spend, ${years[0]}–${years[years.length - 1]}, driven by each unit's hours and utilization.`}
+      />
+
+      <ModuleIntro
+        id="capex"
+        purpose="The multi-year capital budget: when each machine needs a major overhaul or full replacement, and what it costs."
+        edit="Nothing here directly — it derives from My Fleet (hours, utilization) and Catalog (price, life, overhaul interval & cost)."
+        output="Annual CAPEX by year, the peak-spend year, and a unit-by-unit event schedule to take to finance."
+        connects="Pulls units from My Fleet and economics from Catalog. Change a unit's hours or a class price and this updates."
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">

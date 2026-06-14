@@ -1,12 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  BRANDS,
-  CATEGORY_LABELS,
-  EQUIVALENCE_CLASSES,
-  MODELS,
-} from "@/data/catalog";
+import { BRANDS, CATEGORY_LABELS, MODELS } from "@/data/catalog";
 import {
   SCENARIOS,
   SCENARIO_LABELS,
@@ -15,22 +10,20 @@ import {
   usd,
 } from "@/lib/engine";
 import { useParams } from "@/lib/store";
+import { useCatalog } from "@/lib/catalogStore";
 import type { Brand, Category } from "@/lib/types";
 import { BrandBadge, EstimateBadge } from "@/components/BrandBadge";
 import { ParamsPanel } from "@/components/ParamsPanel";
+import { ModuleIntro } from "@/components/ModuleIntro";
 import { Card, PageHeader, Pill } from "@/components/ui";
 
 const CATEGORIES = Object.keys(CATEGORY_LABELS) as Category[];
 
 export default function CalculatorPage() {
   const { params } = useParams();
+  const { classById } = useCatalog();
   const [category, setCategory] = useState<Category>("wheel-loader");
   const [activeBrands, setActiveBrands] = useState<Set<Brand>>(new Set(BRANDS));
-
-  const classById = useMemo(
-    () => new Map(EQUIVALENCE_CLASSES.map((c) => [c.id, c])),
-    []
-  );
 
   const rows = useMemo(() => {
     return MODELS.filter((mod) => {
@@ -46,6 +39,7 @@ export default function CalculatorPage() {
     });
   }, [category, activeBrands, classById, params]);
 
+
   const toggleBrand = (b: Brand) =>
     setActiveBrands((prev) => {
       const next = new Set(prev);
@@ -59,6 +53,14 @@ export default function CalculatorPage() {
       <PageHeader
         title="Cost Calculator"
         subtitle="Hourly operating cost — fuel + maintenance & service + operator — by duty scenario."
+      />
+
+      <ModuleIntro
+        id="calculator"
+        purpose="The hourly operating cost of any machine in the catalog, multi-brand, under three duty scenarios (Low / Medium / High)."
+        edit="The Parameters panel on the left: diesel price, operator wages, utilization and brand factors. Cost data per model lives in Catalog."
+        output="Cost per hour split into fuel + maintenance + operator, per model — your benchmark for budgeting and bids."
+        connects="Uses the editable Catalog data. The same engine powers Compare, My Fleet, CAPEX and Sites."
       />
 
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">

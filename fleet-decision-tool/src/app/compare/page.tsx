@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { CATEGORY_LABELS, EQUIVALENCE_CLASSES, MODELS } from "@/data/catalog";
+import { CATEGORY_LABELS, MODELS } from "@/data/catalog";
 import {
   SCENARIOS,
   SCENARIO_LABELS,
@@ -20,15 +20,18 @@ import {
   usd,
 } from "@/lib/engine";
 import { useParams } from "@/lib/store";
+import { useCatalog } from "@/lib/catalogStore";
 import type { Scenario } from "@/lib/types";
 import { BrandBadge, EstimateBadge } from "@/components/BrandBadge";
 import { ParamsPanel } from "@/components/ParamsPanel";
+import { ModuleIntro } from "@/components/ModuleIntro";
 import { Card, PageHeader, Segmented } from "@/components/ui";
 
 const MAX_SELECTION = 5;
 
 export default function ComparePage() {
   const { params } = useParams();
+  const { classes, classById } = useCatalog();
   const [scenario, setScenario] = useState<Scenario>("medium");
   const [selected, setSelected] = useState<string[]>([
     "cat-980m",
@@ -36,11 +39,6 @@ export default function ComparePage() {
     "vo-l220",
     "jd-844",
   ]);
-
-  const classById = useMemo(
-    () => new Map(EQUIVALENCE_CLASSES.map((c) => [c.id, c])),
-    []
-  );
 
   const toggle = (id: string) =>
     setSelected((prev) =>
@@ -84,6 +82,14 @@ export default function ComparePage() {
             options={SCENARIOS.map((s) => ({ value: s, label: SCENARIO_LABELS[s] }))}
           />
         }
+      />
+
+      <ModuleIntro
+        id="compare"
+        purpose="A side-by-side cost comparison of up to 5 specific machines — including the same class across different brands."
+        edit="Pick machines from the class list below and the duty scenario at the top. Underlying costs are edited in Catalog and Parameters."
+        output="A stacked bar of fuel/maintenance/operator per hour, plus annualized totals — to choose between brands or sizes."
+        connects="Reads the same Catalog and Parameters as every other module, so a change there updates this instantly."
       />
 
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
@@ -135,7 +141,7 @@ export default function ComparePage() {
           )}
 
           <div className="space-y-3">
-            {EQUIVALENCE_CLASSES.map((cls) => {
+            {classes.map((cls) => {
               const members = MODELS.filter((m) => m.classId === cls.id);
               if (members.length === 0) return null;
               return (

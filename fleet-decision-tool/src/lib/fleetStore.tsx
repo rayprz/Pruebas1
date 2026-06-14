@@ -66,6 +66,7 @@ interface FleetStore {
   addUnit: (u: FleetUnit) => void;
   updateUnit: (id: string, patch: Partial<FleetUnit>) => void;
   removeUnit: (id: string) => void;
+  replaceUnits: (units: FleetUnit[]) => void;
   addSite: (s: Site) => void;
   updateSite: (id: string, patch: Partial<Site>) => void;
   removeSite: (id: string) => void;
@@ -117,6 +118,7 @@ export function FleetProvider({ children }: { children: ReactNode }) {
       updateUnit: (id, patch) =>
         persistUnits(units.map((u) => (u.id === id ? { ...u, ...patch } : u))),
       removeUnit: (id) => persistUnits(units.filter((u) => u.id !== id)),
+      replaceUnits: (next) => persistUnits(next),
       addSite: (s) => persistSites([...sites, s]),
       updateSite: (id, patch) =>
         persistSites(sites.map((s) => (s.id === id ? { ...s, ...patch } : s))),
