@@ -8,8 +8,10 @@ import {
   MODELS,
   PASS_MATCH,
 } from "@/data/catalog";
+import { usdCompact } from "@/lib/engine";
 import type { Category } from "@/lib/types";
 import { BrandBadge } from "@/components/BrandBadge";
+import { Card, PageHeader, SectionTitle } from "@/components/ui";
 
 const CATEGORIES = Object.keys(CATEGORY_LABELS) as Category[];
 
@@ -25,32 +27,27 @@ export default function CatalogPage() {
   }, []);
 
   return (
-    <div className="space-y-10">
-      <section className="space-y-4">
-        <div>
-          <h1 className="text-xl font-bold">Catalog &amp; Brand Equivalences</h1>
-          <p className="text-sm text-slate-400">
-            Each row is a size/duty class. The Caterpillar reference model
-            carries the 2022 OEM cost baseline; other brands are interchangeable
-            equivalents for costing and fleet matching.
-          </p>
-        </div>
+    <div className="space-y-8">
+      <PageHeader
+        title="Catalog & Equivalences"
+        subtitle="Each row is a size/duty class. The Caterpillar reference carries the 2022 OEM cost data; other brands are interchangeable equivalents."
+      />
 
-        {CATEGORIES.map((cat) => {
-          const classes = EQUIVALENCE_CLASSES.filter((c) => c.category === cat);
-          if (classes.length === 0) return null;
-          return (
-            <div key={cat} className="space-y-2">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-yellow-300">
-                {CATEGORY_LABELS[cat]}
-              </h2>
-              <div className="overflow-x-auto rounded-xl border border-slate-800">
-                <table className="w-full min-w-[860px] text-sm">
+      {CATEGORIES.map((cat) => {
+        const classes = EQUIVALENCE_CLASSES.filter((c) => c.category === cat);
+        if (classes.length === 0) return null;
+        return (
+          <div key={cat} className="space-y-2">
+            <SectionTitle>{CATEGORY_LABELS[cat]}</SectionTitle>
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[900px] text-sm">
                   <thead>
-                    <tr className="border-b border-slate-800 bg-slate-900/70 text-left text-xs uppercase tracking-wider text-slate-400">
-                      <th className="px-3 py-2">Class</th>
+                    <tr className="border-b border-line text-left text-[11px] uppercase tracking-[0.1em] text-inkfaint">
+                      <th className="px-4 py-3 font-semibold">Class</th>
+                      <th className="px-4 py-3 text-right font-semibold">New ≈</th>
                       {BRANDS.map((b) => (
-                        <th key={b} className="px-3 py-2">
+                        <th key={b} className="px-4 py-3 font-semibold">
                           {b}
                         </th>
                       ))}
@@ -62,32 +59,35 @@ export default function CatalogPage() {
                       return (
                         <tr
                           key={cls.id}
-                          className="border-b border-slate-800/60 last:border-0 hover:bg-slate-900/40"
+                          className="border-b border-line/60 last:border-0 hover:bg-panel/50"
                         >
-                          <td className="px-3 py-2 font-medium text-slate-200">
+                          <td className="px-4 py-2.5 font-medium text-ink">
                             {cls.name}
                             {cls.payloadTons ? (
-                              <span className="ml-1 text-xs text-slate-500">
+                              <span className="ml-1 text-xs text-inkfaint">
                                 {cls.payloadTons} T
                               </span>
                             ) : null}
                           </td>
+                          <td className="px-4 py-2.5 text-right tabular text-inksoft">
+                            {cls.acquisitionUsd ? usdCompact(cls.acquisitionUsd) : "—"}
+                          </td>
                           {BRANDS.map((b) => {
                             const found = members.filter((m) => m.brand === b);
                             return (
-                              <td key={b} className="px-3 py-2">
+                              <td key={b} className="px-4 py-2.5">
                                 {found.length > 0 ? (
                                   <span
                                     className={
                                       found.some((f) => f.source === "oem")
-                                        ? "font-semibold text-yellow-200"
-                                        : "text-slate-300"
+                                        ? "font-semibold text-accent"
+                                        : "text-inksoft"
                                     }
                                   >
                                     {found.map((f) => f.model).join(", ")}
                                   </span>
                                 ) : (
-                                  <span className="text-slate-700">—</span>
+                                  <span className="text-line-strong">—</span>
                                 )}
                               </td>
                             );
@@ -98,76 +98,68 @@ export default function CatalogPage() {
                   </tbody>
                 </table>
               </div>
-            </div>
-          );
-        })}
-        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-          <span className="font-semibold text-yellow-200">Bold yellow</span> =
-          reference model with OEM cost data. Brand legend:
-          {BRANDS.map((b) => (
-            <BrandBadge key={b} brand={b} />
-          ))}
-        </div>
-      </section>
+            </Card>
+          </div>
+        );
+      })}
 
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-xl font-bold">Loader ↔ Truck Pass Match</h2>
-          <p className="text-sm text-slate-400">
-            Passes required to load each truck — the basis for fleet sizing
-            (Sites &amp; Production phase). Class numbers apply to any brand
-            equivalent.
-          </p>
-        </div>
+      <div className="flex flex-wrap items-center gap-2 text-xs text-inkfaint">
+        <span className="font-semibold text-accent">Accent</span> = reference model
+        with OEM cost data. “New ≈” is an editable estimate. Brands:
+        {BRANDS.map((b) => (
+          <BrandBadge key={b} brand={b} />
+        ))}
+      </div>
+
+      <div className="space-y-3">
+        <SectionTitle>Loader ↔ Truck Pass Match</SectionTitle>
+        <p className="text-sm text-inksoft">
+          Passes to fill each truck — the basis for fleet sizing. Class numbers
+          apply to any brand equivalent.
+        </p>
         <div className="grid gap-4 xl:grid-cols-2">
           {PASS_MATCH.map((table) => (
-            <div
-              key={table.title}
-              className="overflow-x-auto rounded-xl border border-slate-800"
-            >
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-800 bg-slate-900/70 text-left text-xs uppercase tracking-wider text-slate-400">
-                    <th className="px-3 py-2">{table.title}</th>
-                    {table.loaders.map((l) => (
-                      <th key={l} className="px-3 py-2 text-center">
-                        {l}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {table.rows.map((row) => (
-                    <tr
-                      key={row.truck}
-                      className="border-b border-slate-800/60 last:border-0"
-                    >
-                      <td className="px-3 py-1.5 font-medium text-slate-300">
-                        {row.truck}
-                      </td>
-                      {row.passes.map((p, i) => (
-                        <td
-                          key={i}
-                          className={`px-3 py-1.5 text-center tabular-nums ${
-                            p ? "text-yellow-200" : "text-slate-800"
-                          }`}
-                        >
-                          {p ?? "·"}
-                        </td>
+            <Card key={table.title} className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-line text-left text-[11px] uppercase tracking-[0.1em] text-inkfaint">
+                      <th className="px-4 py-3 font-semibold">{table.title}</th>
+                      {table.loaders.map((l) => (
+                        <th key={l} className="px-3 py-3 text-center font-semibold">
+                          {l}
+                        </th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {table.rows.map((row) => (
+                      <tr key={row.truck} className="border-b border-line/60 last:border-0">
+                        <td className="px-4 py-2 font-medium text-inksoft">{row.truck}</td>
+                        {row.passes.map((p, i) => (
+                          <td
+                            key={i}
+                            className={`px-3 py-2 text-center tabular ${
+                              p ? "text-accent" : "text-line-strong"
+                            }`}
+                          >
+                            {p ?? "·"}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               {table.note && (
-                <p className="border-t border-slate-800 px-3 py-1.5 text-xs text-slate-500">
+                <p className="border-t border-line px-4 py-2 text-xs text-inkfaint">
                   {table.note}
                 </p>
               )}
-            </div>
+            </Card>
           ))}
         </div>
-      </section>
+      </div>
     </div>
   );
 }

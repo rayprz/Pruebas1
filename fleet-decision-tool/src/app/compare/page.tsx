@@ -23,6 +23,7 @@ import { useParams } from "@/lib/store";
 import type { Scenario } from "@/lib/types";
 import { BrandBadge, EstimateBadge } from "@/components/BrandBadge";
 import { ParamsPanel } from "@/components/ParamsPanel";
+import { Card, PageHeader, Segmented } from "@/components/ui";
 
 const MAX_SELECTION = 5;
 
@@ -72,122 +73,102 @@ export default function ComparePage() {
   const hours = annualHours(scenario, params);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-      <div className="space-y-4">
+    <div>
+      <PageHeader
+        title="Compare Models"
+        subtitle={`Up to ${MAX_SELECTION} machines — across brands within a class — by hourly cost stack.`}
+        actions={
+          <Segmented
+            value={scenario}
+            onChange={(v) => setScenario(v as Scenario)}
+            options={SCENARIOS.map((s) => ({ value: s, label: SCENARIO_LABELS[s] }))}
+          />
+        }
+      />
+
+      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
         <ParamsPanel />
-      </div>
 
-      <section className="min-w-0 space-y-4">
-        <div>
-          <h1 className="text-xl font-bold">Compare Models</h1>
-          <p className="text-sm text-slate-400">
-            Pick up to {MAX_SELECTION} machines — including across brands within
-            an equivalence class — and compare the hourly cost stack.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-xs uppercase tracking-wider text-slate-500">
-            Scenario:
-          </span>
-          {SCENARIOS.map((s) => (
-            <button
-              key={s}
-              onClick={() => setScenario(s)}
-              className={`rounded-md px-3 py-1 text-sm ${
-                scenario === s
-                  ? "bg-yellow-400 font-semibold text-slate-950"
-                  : "bg-slate-900 text-slate-300 hover:bg-slate-800"
-              }`}
-            >
-              {SCENARIO_LABELS[s]}
-            </button>
-          ))}
-          <span className="text-xs text-slate-500">
-            ≈ {hours.toLocaleString()} hrs/yr
-          </span>
-        </div>
-
-        {chartData.length > 0 && (
-          <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
-            <ResponsiveContainer width="100%" height={320}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 12 }} />
-                <YAxis
-                  tick={{ fill: "#94a3b8", fontSize: 12 }}
-                  label={{
-                    value: "USD / hr",
-                    angle: -90,
-                    position: "insideLeft",
-                    fill: "#64748b",
-                  }}
-                />
-                <Tooltip
-                  formatter={(value) => usd(Number(value))}
-                  contentStyle={{
-                    background: "#0f172a",
-                    border: "1px solid #334155",
-                    borderRadius: 8,
-                    color: "#f1f5f9",
-                  }}
-                />
-                <Legend wrapperStyle={{ color: "#cbd5e1" }} />
-                <Bar dataKey="Fuel" stackId="a" fill="#38bdf8" />
-                <Bar dataKey="Maintenance" stackId="a" fill="#facc15" />
-                <Bar dataKey="Operator" stackId="a" fill="#94a3b8" />
-              </BarChart>
-            </ResponsiveContainer>
-            <div className="mt-2 grid gap-1 text-sm sm:grid-cols-2 lg:grid-cols-3">
-              {chartData.map((d) => (
-                <div key={d.name} className="flex justify-between gap-3">
-                  <span className="text-slate-400">{d.name}</span>
-                  <span className="tabular-nums">
-                    {usd(d.total)}/hr · {usd(d.total * hours, 0)}/yr
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="space-y-3">
-          {EQUIVALENCE_CLASSES.map((cls) => {
-            const members = MODELS.filter((m) => m.classId === cls.id);
-            if (members.length === 0) return null;
-            return (
-              <div
-                key={cls.id}
-                className="rounded-lg border border-slate-800 bg-slate-900/30 px-3 py-2"
-              >
-                <p className="mb-1.5 text-xs uppercase tracking-wider text-slate-500">
-                  {CATEGORY_LABELS[cls.category]} — {cls.name}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {members.map((mod) => {
-                    const active = selected.includes(mod.id);
-                    return (
-                      <button
-                        key={mod.id}
-                        onClick={() => toggle(mod.id)}
-                        className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-sm ${
-                          active
-                            ? "border-yellow-400 bg-yellow-400/10"
-                            : "border-slate-700 hover:border-slate-500"
-                        }`}
-                      >
-                        <BrandBadge brand={mod.brand} />
-                        <span>{mod.model}</span>
-                        {mod.source === "equivalence" && <EstimateBadge />}
-                      </button>
-                    );
-                  })}
-                </div>
+        <section className="min-w-0 space-y-4">
+          {chartData.length > 0 && (
+            <Card className="p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-[11px] uppercase tracking-[0.12em] text-inkfaint">
+                  USD per hour
+                </span>
+                <span className="text-xs text-inkfaint">
+                  ≈ {hours.toLocaleString()} hrs/yr
+                </span>
               </div>
-            );
-          })}
-        </div>
-      </section>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chartData} margin={{ left: 4, right: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e8dfcd" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fill: "#6c6356", fontSize: 12 }} tickLine={false} axisLine={{ stroke: "#e8dfcd" }} />
+                  <YAxis tick={{ fill: "#a89e8c", fontSize: 12 }} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    cursor={{ fill: "rgba(176,106,60,0.06)" }}
+                    formatter={(value) => usd(Number(value))}
+                    contentStyle={{
+                      background: "#fffdf9",
+                      border: "1px solid #e8dfcd",
+                      borderRadius: 12,
+                      color: "#2a2620",
+                    }}
+                  />
+                  <Legend wrapperStyle={{ color: "#6c6356", fontSize: 12 }} />
+                  <Bar dataKey="Fuel" stackId="a" fill="#5b7c8a" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="Maintenance" stackId="a" fill="#b06a3c" />
+                  <Bar dataKey="Operator" stackId="a" fill="#6f7548" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+              <div className="mt-3 grid gap-1 border-t border-line pt-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                {chartData.map((d) => (
+                  <div key={d.name} className="flex justify-between gap-3">
+                    <span className="text-inksoft">{d.name}</span>
+                    <span className="tabular text-ink">
+                      {usd(d.total)}/hr · {usd(d.total * hours, 0)}/yr
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          <div className="space-y-3">
+            {EQUIVALENCE_CLASSES.map((cls) => {
+              const members = MODELS.filter((m) => m.classId === cls.id);
+              if (members.length === 0) return null;
+              return (
+                <div key={cls.id}>
+                  <p className="mb-1.5 text-[11px] uppercase tracking-[0.1em] text-inkfaint">
+                    {CATEGORY_LABELS[cls.category]} — {cls.name}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {members.map((mod) => {
+                      const active = selected.includes(mod.id);
+                      return (
+                        <button
+                          key={mod.id}
+                          onClick={() => toggle(mod.id)}
+                          className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-sm transition-colors ${
+                            active
+                              ? "border-accent bg-accentsoft"
+                              : "border-line bg-card hover:border-line-strong"
+                          }`}
+                        >
+                          <BrandBadge brand={mod.brand} />
+                          <span className="text-ink">{mod.model}</span>
+                          {mod.source === "equivalence" && <EstimateBadge />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

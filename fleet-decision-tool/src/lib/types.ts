@@ -53,6 +53,50 @@ export interface EquivalenceClass {
   maint250?: SeverityValues;
   /** Fuel burn, US gallons per hour */
   fuelGalPerHr: SeverityValues;
+  /** --- Ownership economics (estimates, editable) --------------------- */
+  /** New-machine acquisition price, USD */
+  acquisitionUsd?: number;
+  /** Economic life, operating hours */
+  lifeHours?: number;
+  /** Residual value at end of life, as fraction of acquisition (e.g. 0.25) */
+  salvagePct?: number;
+  /** Major overhaul interval, operating hours */
+  overhaulHours?: number;
+  /** Overhaul cost as fraction of acquisition price (e.g. 0.18) */
+  overhaulCostPct?: number;
+}
+
+/** A single physical machine the customer owns or evaluates. */
+export interface FleetUnit {
+  id: string;
+  /** Unit / asset number, e.g. "HT-204" */
+  unitNo: string;
+  classId: string;
+  /** Specific model id from the catalog (carries the brand) */
+  modelId: string;
+  /** Model year */
+  year: number;
+  /** Current meter reading, operating hours */
+  currentHours: number;
+  /** Projected utilization, hours per year */
+  annualHours: number;
+  /** Work area / site this unit is assigned to */
+  site: string;
+  status: "active" | "standby" | "down";
+}
+
+/** A work area with a yearly production target served by a loader+truck pair. */
+export interface Site {
+  id: string;
+  name: string;
+  /** Required production, short tons per year */
+  productionTons: number;
+  /** Haul distance, one-way km (drives truck cycle time) */
+  haulKm: number;
+  /** Loader/excavator class assigned to load */
+  loaderClassId: string;
+  /** Haul-truck class assigned */
+  truckClassId: string;
 }
 
 export interface EquipmentModel {
@@ -89,6 +133,10 @@ export interface GlobalParams {
   maintenanceEscalation: number;
   /** Per-brand maintenance adjustment vs the class reference (1.0 = parity) */
   brandFactors: Record<Brand, number>;
+  /** Annual cost of capital used for owning cost (e.g. 0.08) */
+  interestRate: number;
+  /** Annual insurance as fraction of acquisition value (e.g. 0.02) */
+  insuranceRate: number;
 }
 
 export interface CostBreakdown {

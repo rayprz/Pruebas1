@@ -1,18 +1,19 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ParamsProvider } from "@/lib/store";
-import { NavBar } from "@/components/NavBar";
+import { FleetProvider } from "@/lib/fleetStore";
+import { Sidebar } from "@/components/Sidebar";
+import { Topbar } from "@/components/Topbar";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
   subsets: ["latin"],
+  style: ["normal", "italic"],
+  display: "swap",
 });
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Fleet Decision Tool",
@@ -22,25 +23,25 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${fraunces.variable} ${geistSans.variable} ${geistMono.variable}`}
     >
-      <body className="min-h-full flex flex-col bg-slate-950 text-slate-100">
+      <body className="bg-canvas text-ink">
         <ParamsProvider>
-          <NavBar />
-          <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">
-            {children}
-          </main>
-          <footer className="mx-auto w-full max-w-7xl px-4 pb-8 pt-4 text-xs text-slate-500">
-            Cost baseline: OEM 2022 base-year O&amp;O data (USD). Non-Caterpillar
-            models are estimated from their equivalence class until real fleet
-            data is loaded — tune escalation and brand factors in Parameters.
-          </footer>
+          <FleetProvider>
+            <div className="flex min-h-screen">
+              <Sidebar />
+              <div className="flex min-w-0 flex-1 flex-col">
+                <Topbar />
+                <main className="flex-1 px-6 py-7">
+                  <div className="mx-auto max-w-7xl">{children}</div>
+                </main>
+              </div>
+            </div>
+          </FleetProvider>
         </ParamsProvider>
       </body>
     </html>

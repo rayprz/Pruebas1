@@ -18,15 +18,14 @@ import { useParams } from "@/lib/store";
 import type { Brand, Category } from "@/lib/types";
 import { BrandBadge, EstimateBadge } from "@/components/BrandBadge";
 import { ParamsPanel } from "@/components/ParamsPanel";
+import { Card, PageHeader, Pill } from "@/components/ui";
 
 const CATEGORIES = Object.keys(CATEGORY_LABELS) as Category[];
 
 export default function CalculatorPage() {
   const { params } = useParams();
   const [category, setCategory] = useState<Category>("wheel-loader");
-  const [activeBrands, setActiveBrands] = useState<Set<Brand>>(
-    new Set(BRANDS)
-  );
+  const [activeBrands, setActiveBrands] = useState<Set<Brand>>(new Set(BRANDS));
 
   const classById = useMemo(
     () => new Map(EQUIVALENCE_CLASSES.map((c) => [c.id, c])),
@@ -56,121 +55,111 @@ export default function CalculatorPage() {
     });
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-      <ParamsPanel />
+    <div>
+      <PageHeader
+        title="Cost Calculator"
+        subtitle="Hourly operating cost — fuel + maintenance & service + operator — by duty scenario."
+      />
 
-      <section className="min-w-0 space-y-4">
-        <div>
-          <h1 className="text-xl font-bold">Operating Cost per Hour</h1>
-          <p className="text-sm text-slate-400">
-            Fuel + maintenance &amp; service + operator, by duty scenario.
+      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+        <ParamsPanel />
+
+        <section className="min-w-0 space-y-4">
+          <div className="flex flex-wrap gap-1.5">
+            {CATEGORIES.map((c) => (
+              <button
+                key={c}
+                onClick={() => setCategory(c)}
+                className={`rounded-full px-3.5 py-1.5 text-sm transition-colors ${
+                  category === c
+                    ? "bg-accent font-semibold text-card"
+                    : "border border-line bg-card text-inksoft hover:text-ink"
+                }`}
+              >
+                {CATEGORY_LABELS[c]}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] uppercase tracking-[0.12em] text-inkfaint">
+              Brands
+            </span>
+            {BRANDS.map((b) => (
+              <Pill key={b} active={activeBrands.has(b)} onClick={() => toggleBrand(b)}>
+                {b}
+              </Pill>
+            ))}
+          </div>
+
+          <Card className="overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-sm">
+                <thead>
+                  <tr className="border-b border-line text-left text-[11px] uppercase tracking-[0.1em] text-inkfaint">
+                    <th className="px-4 py-3 font-semibold">Model</th>
+                    <th className="px-4 py-3 font-semibold">Class</th>
+                    <th className="px-4 py-3 text-right font-semibold">Fuel gal/hr</th>
+                    {SCENARIOS.map((s) => (
+                      <th key={s} className="px-4 py-3 text-right font-semibold">
+                        {SCENARIO_LABELS[s]} $/hr
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map(({ mod, cls, scenarios }) => (
+                    <tr
+                      key={mod.id}
+                      className="border-b border-line/60 last:border-0 hover:bg-panel/50"
+                    >
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <BrandBadge brand={mod.brand} />
+                          <span className="font-medium text-ink">{mod.model}</span>
+                          {mod.source === "equivalence" && <EstimateBadge />}
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5 text-inksoft">{cls.name}</td>
+                      <td className="px-4 py-2.5 text-right tabular text-inksoft">
+                        {cls.fuelGalPerHr.moderate}–{cls.fuelGalPerHr.severe}
+                      </td>
+                      {scenarios.map((b, i) => (
+                        <td
+                          key={i}
+                          className={`px-4 py-2.5 text-right tabular ${
+                            i === 1 ? "font-semibold text-accent" : "text-ink"
+                          }`}
+                          title={`Fuel ${usd(b.fuel)} + Maint ${usd(
+                            b.maintenance
+                          )} + Labor ${usd(b.labor)}`}
+                        >
+                          {usd(b.total)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                  {rows.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-10 text-center text-inkfaint">
+                        No models match the selected brands.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          <p className="text-xs text-inkfaint">
             Operator cost: {usd(laborCostPerHr("low", params))}/hr (Low) ·{" "}
             {usd(laborCostPerHr("medium", params))}/hr (Medium) ·{" "}
-            {usd(laborCostPerHr("high", params))}/hr (High).
+            {usd(laborCostPerHr("high", params))}/hr (High). Hover a total for the
+            fuel / maintenance / labor split. “est” = costs inherited from the
+            class reference.
           </p>
-        </div>
-
-        <div className="flex flex-wrap gap-1">
-          {CATEGORIES.map((c) => (
-            <button
-              key={c}
-              onClick={() => setCategory(c)}
-              className={`rounded-md px-3 py-1.5 text-sm ${
-                category === c
-                  ? "bg-yellow-400 font-semibold text-slate-950"
-                  : "bg-slate-900 text-slate-300 hover:bg-slate-800"
-              }`}
-            >
-              {CATEGORY_LABELS[c]}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs uppercase tracking-wider text-slate-500">
-            Brands:
-          </span>
-          {BRANDS.map((b) => (
-            <button
-              key={b}
-              onClick={() => toggleBrand(b)}
-              className={`rounded-full border px-2.5 py-0.5 text-xs ${
-                activeBrands.has(b)
-                  ? "border-slate-500 bg-slate-800 text-white"
-                  : "border-slate-800 text-slate-600 hover:text-slate-400"
-              }`}
-            >
-              {b}
-            </button>
-          ))}
-        </div>
-
-        <div className="overflow-x-auto rounded-xl border border-slate-800">
-          <table className="w-full min-w-[760px] text-sm">
-            <thead>
-              <tr className="border-b border-slate-800 bg-slate-900/70 text-left text-xs uppercase tracking-wider text-slate-400">
-                <th className="px-3 py-2">Model</th>
-                <th className="px-3 py-2">Class</th>
-                <th className="px-3 py-2 text-right">Fuel gal/hr</th>
-                <th className="px-3 py-2 text-right">Maint $/hr</th>
-                {SCENARIOS.map((s) => (
-                  <th key={s} className="px-3 py-2 text-right">
-                    {SCENARIO_LABELS[s]} $/hr
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(({ mod, cls, scenarios }) => (
-                <tr
-                  key={mod.id}
-                  className="border-b border-slate-800/60 last:border-0 hover:bg-slate-900/40"
-                >
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <BrandBadge brand={mod.brand} />
-                      <span className="font-semibold">{mod.model}</span>
-                      {mod.source === "equivalence" && <EstimateBadge />}
-                    </div>
-                  </td>
-                  <td className="px-3 py-2 text-slate-400">{cls.name}</td>
-                  <td className="px-3 py-2 text-right text-slate-300">
-                    {cls.fuelGalPerHr.moderate}–{cls.fuelGalPerHr.severe}
-                  </td>
-                  <td className="px-3 py-2 text-right text-slate-300">
-                    {usd(scenarios[0].maintenance)}–{usd(scenarios[2].maintenance)}
-                  </td>
-                  {scenarios.map((b, i) => (
-                    <td
-                      key={i}
-                      className={`px-3 py-2 text-right tabular-nums ${
-                        i === 1 ? "font-semibold text-yellow-300" : ""
-                      }`}
-                      title={`Fuel ${usd(b.fuel)} + Maint ${usd(
-                        b.maintenance
-                      )} + Labor ${usd(b.labor)}`}
-                    >
-                      {usd(b.total)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
-                    No models match the selected brands.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        <p className="text-xs text-slate-500">
-          Hover a total to see the fuel / maintenance / labor split. Medium
-          scenario highlighted. Models marked “est” inherit costs from their
-          equivalence class.
-        </p>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }

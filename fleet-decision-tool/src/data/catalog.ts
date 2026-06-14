@@ -1,5 +1,6 @@
 import type {
   Brand,
+  Category,
   EquipmentModel,
   EquivalenceClass,
   GlobalParams,
@@ -531,6 +532,8 @@ export const DEFAULT_PARAMS: GlobalParams = {
   serviceInterval: 500,
   hoursPerWeek: { low: 40, medium: 50, high: 60 },
   maintenanceEscalation: 1.15,
+  interestRate: 0.08,
+  insuranceRate: 0.02,
   brandFactors: {
     Caterpillar: 1,
     Komatsu: 1,
@@ -542,3 +545,53 @@ export const DEFAULT_PARAMS: GlobalParams = {
     Kawasaki: 1,
   },
 };
+
+// ---------------------------------------------------------------------------
+// Ownership economics (ESTIMATES, editable). The 2022 O&O workbook covers fuel
+// and maintenance per hour but not capital cost, so new-machine prices below
+// are rough current USD list prices (some informed by the CEMEX Tepeaca quote)
+// and life/overhaul figures are category defaults. Treat as starting
+// assumptions, not quotes.
+// ---------------------------------------------------------------------------
+
+const ACQUISITION_USD: Record<string, number> = {
+  "wl-950": 350000, "wl-962": 420000, "wl-966": 480000, "wl-972": 560000, "wl-980": 720000,
+  "pl-988": 1400000, "pl-990": 1750000, "pl-992": 2600000, "pl-993": 3600000,
+  "ex-320": 260000, "ex-330": 400000, "ex-349": 750000, "ex-374": 1100000, "ex-390": 1400000,
+  "ht-770": 900000, "ht-773": 1300000, "ht-775": 1600000, "ht-777": 2100000, "ht-785": 4000000,
+  "at-740": 700000,
+  "dz-d5": 400000, "dz-d6": 600000, "dz-d7": 750000, "dz-d8": 1100000, "dz-d9": 1600000,
+  "dz-d10": 2600000, "dz-d11": 3800000,
+  "mg-12": 380000, "mg-140": 450000, "mg-160": 520000, "mg-14": 620000, "mg-16": 780000,
+  "ms-skid-s": 55000, "ms-skid-l": 75000, "ms-tele": 130000,
+};
+
+const LIFE_HOURS: Record<Category, number> = {
+  "wheel-loader": 25000,
+  "pit-loader": 50000,
+  excavator: 25000,
+  "rigid-truck": 60000,
+  "articulated-truck": 20000,
+  dozer: 30000,
+  "motor-grader": 25000,
+  misc: 12000,
+};
+
+const OVERHAUL_HOURS: Record<Category, number> = {
+  "wheel-loader": 12000,
+  "pit-loader": 18000,
+  excavator: 12000,
+  "rigid-truck": 18000,
+  "articulated-truck": 10000,
+  dozer: 12000,
+  "motor-grader": 12000,
+  misc: 6000,
+};
+
+for (const cls of EQUIVALENCE_CLASSES) {
+  cls.acquisitionUsd ??= ACQUISITION_USD[cls.id] ?? 500000;
+  cls.lifeHours ??= LIFE_HOURS[cls.category];
+  cls.overhaulHours ??= OVERHAUL_HOURS[cls.category];
+  cls.salvagePct ??= 0.2;
+  cls.overhaulCostPct ??= 0.18;
+}
