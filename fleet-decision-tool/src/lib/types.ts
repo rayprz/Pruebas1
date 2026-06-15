@@ -112,6 +112,31 @@ export interface ShiftRecord {
   fronts: ShiftFrontEntry[];
   note?: string;
 }
+
+/** Maintenance type for a cost line. */
+export type MaintType = "preventive" | "corrective" | "overhaul";
+
+/** One maintenance cost line within a unit-month (by subsystem & type). */
+export interface MaintLine {
+  id: string;
+  subsystem: string;
+  type: MaintType;
+  cost: number;
+  laborHours?: number;
+}
+
+/** A unit's maintenance for one month, broken down into subsystem lines. */
+export interface MaintRecord {
+  id: string;
+  /** FleetUnit id — quarry/class/brand/hours derive from My Fleet */
+  unitId: string;
+  /** "YYYY-MM" */
+  month: string;
+  /** Operating hours run that month (for $/hr) */
+  hours: number;
+  lines: MaintLine[];
+  note?: string;
+}
 export interface QuarryProduct {
   id: string;
   name: string;
@@ -233,6 +258,9 @@ export interface GlobalParams {
   interestRate: number;
   /** Annual insurance as fraction of acquisition value (e.g. 0.02) */
   insuranceRate: number;
+  /** When true, use logged actual maintenance $/hr (where available) instead of
+   *  the modeled class baseline, across Fleet / Quarry / Dashboard. */
+  useActualMaint: boolean;
 }
 
 export interface CostBreakdown {

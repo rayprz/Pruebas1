@@ -30,6 +30,8 @@ export interface QuarryMetrics {
   // Fleet & capital
   operating: number;
   owning: number;
+  /** Annualized actual maintenance spend for units that have logged data */
+  actualMaintUsdYear: number;
   nearEol: number;
   aging: { unitNo: string; lifePct: number; model: string }[];
   capexByYear: Map<number, number>;
@@ -57,21 +59,24 @@ export function quarryMetrics(
   allUnits: FleetUnit[],
   allRecords: ShiftRecord[],
   classById: Map<string, EquivalenceClass>,
-  params: GlobalParams
+  params: GlobalParams,
+  maintByUnit?: Map<string, number>
 ): QuarryMetrics {
   const units = allUnits.filter((u) => u.quarryId === quarry.id);
   const unitsById = new Map(units.map((u) => [u.id, u]));
 
-  let operating = 0, owning = 0, nearEol = 0, capexTotal = 0, availSum = 0;
+  let operating = 0, owning = 0, nearEol = 0, capexTotal = 0, availSum = 0, actualMaintUsdYear = 0;
   const aging: { unitNo: string; lifePct: number; model: string }[] = [];
   const capexByYear = new Map<number, number>();
   for (const u of units) {
     availSum += u.availability;
+    const override = maintByUnit?.get(u.id);
+    if (override !== undefined) actualMaintUsdYear += override * u.annualHours;
     const cls = classById.get(u.classId);
     if (!cls) continue;
     const model = modelById.get(u.modelId) ?? refModel(u.classId);
     if (model) {
-      const c = unitAnnualCost(cls, model, "medium", u, params);
+      const c = unitAnnualCost(cls, model, "medium", u, params, override);
       operating += c.operating;
       owning += c.owning;
       const lifePct = cls.lifeHours ? u.currentHours / cls.lifeHours : 0;
@@ -99,18 +104,18 @@ export function quarryMetrics(
     const current = units.reduce((s, u) => {
       const c = classById.get(u.classId);
       const m = modelById.get(u.modelId) ?? refModel(u.classId);
-      return c && m ? s + unitAnnualCost(c, m, "medium", u, params).operating : s;
+      return c && m ? s + unitAnnualCost(c, m, "medium", u, params, maintByUnit?.get(u.id)).operating : s;
     }, 0);
     excess = current - optimal;
   }
 
-  const r = computeQuarry(quarry.config, classById, params, unitsById);
+  const r = computeQuarry(quarry.config, classById, params, unitsById, maintByUnit);
   const modelByFront = new Map(r.fronts.map((f) => [f.name, f.delivered]));
   const records = allRecords.filter((rec) => rec.quarryId === quarry.id);
   const s = summarize(records, modelByFront, quarry.config.targetTph);
 
   return {
-    quarry, units, operating, owning, nearEol, aging, capexByYear, capexTotal, excess,
+    quarry, units, operating, owning, actualMaintUsdYear, nearEol, aging, capexByYear, capexTotal, excess,
     avgAvailability: units.length ? availSum / units.length : 0,
     systemTph: r.systemTph,
     planAttainment: r.planAttainment,

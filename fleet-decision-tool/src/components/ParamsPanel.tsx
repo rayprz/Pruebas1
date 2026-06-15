@@ -65,6 +65,25 @@ export function ParamsPanel() {
         ))}
       </div>
 
+      <div className="space-y-2 border-t border-line pt-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-inkfaint">
+          Maintenance source
+        </p>
+        <Segmented
+          value={params.useActualMaint ? "actual" : "modeled"}
+          onChange={(v) => update({ useActualMaint: v === "actual" })}
+          options={[
+            { value: "modeled", label: "Modeled" },
+            { value: "actual", label: "Actual" },
+          ]}
+          size="sm"
+        />
+        <p className="text-xs text-inkfaint">
+          “Actual” uses logged maintenance $/hr (from the Maintenance module)
+          where available, across Fleet, Quarry and the Dashboard.
+        </p>
+      </div>
+
       <div className="border-t border-line pt-3">
         <button
           onClick={() => setShowCapital((s) => !s)}

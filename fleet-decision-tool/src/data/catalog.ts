@@ -534,6 +534,7 @@ export const DEFAULT_PARAMS: GlobalParams = {
   maintenanceEscalation: 1.15,
   interestRate: 0.08,
   insuranceRate: 0.02,
+  useActualMaint: false,
   brandFactors: {
     Caterpillar: 1,
     Komatsu: 1,

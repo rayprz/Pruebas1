@@ -130,18 +130,23 @@ export function owningCostPerYear(
   return { depreciation, interest, insurance, total: depreciation + interest + insurance };
 }
 
-/** Operating cost/hr for a specific unit, including age-adjusted maintenance. */
+/** Operating cost/hr for a specific unit, including age-adjusted maintenance.
+ *  When `maintPerHrOverride` is given (actual logged $/hr), it replaces the
+ *  modeled class maintenance. */
 export function unitOperatingPerHour(
   cls: EquivalenceClass,
   model: EquipmentModel,
   scenario: Scenario,
   currentHours: number,
-  p: GlobalParams
+  p: GlobalParams,
+  maintPerHrOverride?: number
 ): CostBreakdown {
   const fuel = fuelCostPerHr(cls, scenario, p);
   const maintenance =
-    maintenanceCostPerHr(cls, model, scenario, p) *
-    ageMaintenanceMultiplier(currentHours, cls.lifeHours);
+    maintPerHrOverride !== undefined
+      ? maintPerHrOverride
+      : maintenanceCostPerHr(cls, model, scenario, p) *
+        ageMaintenanceMultiplier(currentHours, cls.lifeHours);
   const labor = laborCostPerHr(scenario, p);
   return { fuel, maintenance, labor, total: fuel + maintenance + labor };
 }
@@ -158,9 +163,10 @@ export function unitAnnualCost(
   model: EquipmentModel,
   scenario: Scenario,
   unit: FleetUnit,
-  p: GlobalParams
+  p: GlobalParams,
+  maintPerHrOverride?: number
 ): UnitAnnualCost {
-  const perHour = unitOperatingPerHour(cls, model, scenario, unit.currentHours, p);
+  const perHour = unitOperatingPerHour(cls, model, scenario, unit.currentHours, p, maintPerHrOverride);
   const operating = perHour.total * unit.annualHours;
   const owning = owningCostPerYear(cls, unit.annualHours, p).total;
   return { perHour, operating, owning, total: operating + owning };

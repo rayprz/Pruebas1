@@ -13,11 +13,13 @@ import {
 } from "recharts";
 import { usd, usdCompact } from "@/lib/engine";
 import { quarryMetrics, type QuarryMetrics } from "@/lib/rollup";
+import { actualMaintPerHrByUnit } from "@/lib/maintLog";
 import { useParams } from "@/lib/store";
 import { useCatalog } from "@/lib/catalogStore";
 import { useFleet } from "@/lib/fleetStore";
 import { useQuarry } from "@/lib/quarryStore";
 import { useShiftLog } from "@/lib/shiftStore";
+import { useMaint } from "@/lib/maintStore";
 import { ModuleIntro } from "@/components/ModuleIntro";
 import { InfoTip } from "@/components/InfoTip";
 import { Card, PageHeader, SectionTitle, Select } from "@/components/ui";
@@ -32,11 +34,17 @@ export default function CompareQuarriesPage() {
   const { units } = useFleet();
   const { quarries } = useQuarry();
   const { records } = useShiftLog();
+  const { records: maintRecords } = useMaint();
   const [sortBy, setSortBy] = useState<SortKey>("region");
 
+  const maintByUnit = useMemo(
+    () => (params.useActualMaint ? actualMaintPerHrByUnit(maintRecords) : undefined),
+    [params.useActualMaint, maintRecords]
+  );
+
   const metrics = useMemo(
-    () => quarries.map((q) => quarryMetrics(q, units, records, classById, params)),
-    [quarries, units, records, classById, params]
+    () => quarries.map((q) => quarryMetrics(q, units, records, classById, params, maintByUnit)),
+    [quarries, units, records, classById, params, maintByUnit]
   );
 
   const sorted = useMemo(() => {

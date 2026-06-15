@@ -136,12 +136,13 @@ export interface QuarryResult {
 function classOpHr(
   classId: string,
   classById: Map<string, EquivalenceClass>,
-  params: GlobalParams
+  params: GlobalParams,
+  maintOverride?: number
 ): number {
   const cls = classById.get(classId);
   const model = refModel(classId);
   if (!cls || !model) return 0;
-  return unitOperatingPerHour(cls, model, "medium", 0, params).total;
+  return unitOperatingPerHour(cls, model, "medium", 0, params, maintOverride).total;
 }
 
 function classFuel(classId: string, classById: Map<string, EquivalenceClass>): number {
@@ -252,7 +253,8 @@ export function computeQuarry(
   cfg: QuarryConfig,
   classById: Map<string, EquivalenceClass>,
   params: GlobalParams,
-  unitsById: Map<string, FleetUnit>
+  unitsById: Map<string, FleetUnit>,
+  maintByUnit?: Map<string, number>
 ): QuarryResult {
   const scheduledHoursYear = cfg.shiftsPerDay * cfg.hoursPerShift * cfg.daysPerYear;
   const productiveHoursYear = scheduledHoursYear * cfg.operatingEfficiency;
@@ -380,12 +382,13 @@ export function computeQuarry(
   for (const f of cfg.fronts) {
     const loaderClassId =
       (f.loaderUnitId ? unitsById.get(f.loaderUnitId)?.classId : undefined) ?? f.loaderClassId;
-    loadCostYr += classOpHr(loaderClassId, classById, params) * productiveHoursYear;
+    const loaderMaint = f.loaderUnitId ? maintByUnit?.get(f.loaderUnitId) : undefined;
+    loadCostYr += classOpHr(loaderClassId, classById, params, loaderMaint) * productiveHoursYear;
     fuelGalYr += classFuel(loaderClassId, classById) * productiveHoursYear;
     for (const unitId of f.truckUnitIds) {
       const unit = unitsById.get(unitId);
       if (!unit) continue;
-      haulCostYr += classOpHr(unit.classId, classById, params) * productiveHoursYear;
+      haulCostYr += classOpHr(unit.classId, classById, params, maintByUnit?.get(unitId)) * productiveHoursYear;
       fuelGalYr += classFuel(unit.classId, classById) * productiveHoursYear;
     }
   }

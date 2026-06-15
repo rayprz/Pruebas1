@@ -12,6 +12,7 @@ import {
   IconSettings,
   IconSites,
   IconTruck,
+  IconWrench,
 } from "./Icons";
 
 const GROUPS: {
@@ -38,6 +39,7 @@ const GROUPS: {
     items: [
       { href: "/fleet", label: "My Fleet", Icon: IconTruck },
       { href: "/quarry", label: "Quarry Performance", Icon: IconQuarry },
+      { href: "/maintenance", label: "Maintenance", Icon: IconWrench },
       { href: "/capex", label: "CAPEX Planner", Icon: IconCapex },
       { href: "/sites", label: "Sites & Production", Icon: IconSites },
     ],

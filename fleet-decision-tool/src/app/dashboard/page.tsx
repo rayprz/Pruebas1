@@ -15,10 +15,12 @@ import {
 import { usd, usdCompact } from "@/lib/engine";
 import { BASE_YEAR, CAPEX_HORIZON, useFleet } from "@/lib/fleetStore";
 import { quarryMetrics, type QuarryMetrics } from "@/lib/rollup";
+import { actualMaintPerHrByUnit } from "@/lib/maintLog";
 import { useParams } from "@/lib/store";
 import { useCatalog } from "@/lib/catalogStore";
 import { useQuarry } from "@/lib/quarryStore";
 import { useShiftLog } from "@/lib/shiftStore";
+import { useMaint } from "@/lib/maintStore";
 import { Card, PageHeader, SectionTitle, Select, StatCard } from "@/components/ui";
 import { InfoTip } from "@/components/InfoTip";
 
@@ -28,6 +30,11 @@ export default function DashboardPage() {
   const { units } = useFleet();
   const { quarries } = useQuarry();
   const { records } = useShiftLog();
+  const { records: maintRecords } = useMaint();
+  const maintByUnit = useMemo(
+    () => (params.useActualMaint ? actualMaintPerHrByUnit(maintRecords) : undefined),
+    [params.useActualMaint, maintRecords]
+  );
   const [scope, setScope] = useState<string>("all");
 
   const regions = useMemo(() => [...new Set(quarries.map((q) => q.region))], [quarries]);
@@ -48,8 +55,8 @@ export default function DashboardPage() {
   }, [scope, quarries]);
 
   const metrics = useMemo(
-    () => includedQuarries.map((q) => quarryMetrics(q, units, records, classById, params)),
-    [includedQuarries, units, records, classById, params]
+    () => includedQuarries.map((q) => quarryMetrics(q, units, records, classById, params, maintByUnit)),
+    [includedQuarries, units, records, classById, params, maintByUnit]
   );
 
   const agg = useMemo(() => {

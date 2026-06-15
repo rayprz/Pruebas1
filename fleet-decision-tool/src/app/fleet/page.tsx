@@ -13,6 +13,8 @@ import { useParams } from "@/lib/store";
 import { useCatalog } from "@/lib/catalogStore";
 import { useFleet } from "@/lib/fleetStore";
 import { useQuarry } from "@/lib/quarryStore";
+import { useMaint } from "@/lib/maintStore";
+import { actualMaintPerHrByUnit } from "@/lib/maintLog";
 import { csvToUnits, downloadCsv, unitsToCsv } from "@/lib/csv";
 import type { FleetUnit, Scenario } from "@/lib/types";
 import { BrandBadge } from "@/components/BrandBadge";
@@ -39,6 +41,7 @@ export default function FleetPage() {
   const { classById, classes } = useCatalog();
   const { units, addUnit, updateUnit, removeUnit, replaceUnits, resetAll } = useFleet();
   const { quarries } = useQuarry();
+  const { records: maintRecords } = useMaint();
   const [scenario, setScenario] = useState<Scenario>("medium");
   const [quarryFilter, setQuarryFilter] = useState<string>("all");
   const [adding, setAdding] = useState(false);
@@ -52,6 +55,11 @@ export default function FleetPage() {
   const visibleUnits = useMemo(
     () => (quarryFilter === "all" ? units : units.filter((u) => u.quarryId === quarryFilter)),
     [units, quarryFilter]
+  );
+
+  const maintOverride = useMemo(
+    () => (params.useActualMaint ? actualMaintPerHrByUnit(maintRecords) : undefined),
+    [params.useActualMaint, maintRecords]
   );
 
   const { rows, invalid } = useMemo(() => {
@@ -71,12 +79,12 @@ export default function FleetPage() {
       }
       const model =
         modelById.get(u.modelId) ?? MODELS.find((m) => m.classId === u.classId)!;
-      const cost = unitAnnualCost(cls, model, scenario, u, params);
+      const cost = unitAnnualCost(cls, model, scenario, u, params, maintOverride?.get(u.id));
       const lifePct = cls.lifeHours ? u.currentHours / cls.lifeHours : 0;
       rows.push({ u, cls, model, cost, lifePct });
     }
     return { rows, invalid };
-  }, [visibleUnits, scenario, classById, modelById, params]);
+  }, [visibleUnits, scenario, classById, modelById, params, maintOverride]);
 
   const totals = useMemo(() => {
     const operating = rows.reduce((s, r) => s + r.cost.operating, 0);

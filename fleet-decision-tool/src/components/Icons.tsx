@@ -92,6 +92,12 @@ export const IconDashboard = (p: IconProps) => (
   </svg>
 );
 
+export const IconWrench = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <path d="M14.7 6.3a4 4 0 0 0-5.2 5.2L3 18l3 3 6.5-6.5a4 4 0 0 0 5.2-5.2l-2.6 2.6-2.5-.5-.5-2.5 2.6-2.6Z" />
+  </svg>
+);
+
 export const IconQuarry = (p: IconProps) => (
   <svg {...base} {...p}>
     <path d="M2 20h20M4 20l5-9 3 5 3-6 5 10" />
