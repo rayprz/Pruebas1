@@ -5,6 +5,13 @@ excavators, dozers, graders). Multi-brand: Caterpillar, Komatsu, John Deere,
 Volvo, Hitachi, Terex, Case, Kawasaki — organized in cross-brand equivalence
 classes.
 
+> **Internal / centralized deployment.** This version stores all data in a
+> shared PostgreSQL database with authentication, role-based access control
+> (region/quarry scopes) and an audit log — built to run inside the corporate
+> network via Docker. See **[DEPLOY.md](./DEPLOY.md)**,
+> **[SECURITY.md](./SECURITY.md)** and **[PROPOSAL.md](./PROPOSAL.md)**.
+> Quick start: `cp .env.example .env` → set `AUTH_SECRET` → `docker compose up -d --build`.
+
 ## Current scope (Phase 1)
 
 - **Cost Calculator** (`/`): hourly operating cost (fuel + maintenance &

@@ -1,0 +1,14 @@
+node_modules
+.next
+out
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+pgdata
+certs
+npm-debug.log*
+*.md
+.vscode
+.DS_Store
