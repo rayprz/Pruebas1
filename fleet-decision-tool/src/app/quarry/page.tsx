@@ -5,6 +5,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  LabelList,
   Legend,
   ResponsiveContainer,
   Tooltip,
@@ -94,9 +95,7 @@ export default function QuarryPage() {
         />
       </div>
 
-      {tab === "actuals" && (
-        <QuarryActuals modelTph={r.crusherThroughputTph} config={config} />
-      )}
+      {tab === "actuals" && <QuarryActuals model={r} config={config} />}
 
       {tab === "model" && (
         <>
@@ -206,9 +205,10 @@ export default function QuarryPage() {
                 Loading: r.cost.load / r.cost.tons,
                 Hauling: r.cost.haul / r.cost.tons,
                 Crushing: r.cost.crush / r.cost.tons,
+                total: r.cost.perTon,
               }]}
               layout="vertical"
-              margin={{ left: 8, right: 16 }}
+              margin={{ left: 8, right: 52 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#e8dfcd" horizontal={false} />
               <XAxis type="number" tickFormatter={(v) => `$${Number(v).toFixed(1)}`} tick={{ fill: "#a89e8c", fontSize: 12 }} tickLine={false} axisLine={false} />
@@ -218,7 +218,9 @@ export default function QuarryPage() {
               <Bar dataKey="Drill & blast" stackId="a" fill="#c08a44" />
               <Bar dataKey="Loading" stackId="a" fill="#6f7548" />
               <Bar dataKey="Hauling" stackId="a" fill="#5b7c8a" />
-              <Bar dataKey="Crushing" stackId="a" fill="#b06a3c" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="Crushing" stackId="a" fill="#b06a3c" radius={[0, 4, 4, 0]}>
+                <LabelList dataKey="total" position="right" formatter={(v: unknown) => usd(Number(v), 2)} style={{ fill: "#6c6356", fontSize: 12, fontWeight: 600 }} />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
           <p className="mt-1 text-center font-display text-xl tabular text-ink">{usd(r.cost.perTon, 2)}<span className="ml-1 text-sm font-sans not-italic text-inkfaint">/ ton</span></p>

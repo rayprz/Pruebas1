@@ -5,6 +5,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  LabelList,
   Legend,
   ResponsiveContainer,
   Tooltip,
@@ -112,7 +113,7 @@ export default function ComparePage() {
                 </span>
               </div>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chartData} margin={{ left: 4, right: 4 }}>
+                <BarChart data={chartData} margin={{ left: 4, right: 4, top: 22 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e8dfcd" vertical={false} />
                   <XAxis dataKey="name" tick={{ fill: "#6c6356", fontSize: 12 }} tickLine={false} axisLine={{ stroke: "#e8dfcd" }} />
                   <YAxis tick={{ fill: "#a89e8c", fontSize: 12 }} tickLine={false} axisLine={false} />
@@ -129,7 +130,9 @@ export default function ComparePage() {
                   <Legend wrapperStyle={{ color: "#6c6356", fontSize: 12 }} />
                   <Bar dataKey="Fuel" stackId="a" fill="#5b7c8a" radius={[0, 0, 0, 0]} />
                   <Bar dataKey="Maintenance" stackId="a" fill="#b06a3c" />
-                  <Bar dataKey="Operator" stackId="a" fill="#6f7548" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Operator" stackId="a" fill="#6f7548" radius={[4, 4, 0, 0]}>
+                    <LabelList dataKey="total" position="top" formatter={(v: unknown) => usd(Number(v), 0)} style={{ fill: "#6c6356", fontSize: 11, fontWeight: 600 }} />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
               <div className="mt-3 grid gap-1 border-t border-line pt-3 text-sm sm:grid-cols-2 lg:grid-cols-3">

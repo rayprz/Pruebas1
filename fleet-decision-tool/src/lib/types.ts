@@ -99,7 +99,19 @@ export interface Site {
   truckClassId: string;
 }
 
-/** A logged production shift, for actual-vs-model tracking. */
+/** One front's actual contribution within a logged shift. */
+export interface ShiftFrontEntry {
+  id: string;
+  frontName: string;
+  /** Tons produced/moved by this front in the shift */
+  tons: number;
+  /** Downtime hours at this front (loader/trucks/route) */
+  downtimeHours: number;
+  /** Primary downtime cause for this front */
+  downtimeReason: string;
+}
+
+/** A logged production shift, broken down by front, for actual-vs-model tracking. */
 export interface ShiftRecord {
   id: string;
   /** ISO date yyyy-mm-dd */
@@ -107,11 +119,7 @@ export interface ShiftRecord {
   /** Shift label, e.g. "A" / "B" / "Night" */
   shift: string;
   scheduledHours: number;
-  downtimeHours: number;
-  /** Saleable tons produced (crusher output) this shift */
-  actualTons: number;
-  /** Primary downtime cause, grouped for the Pareto */
-  downtimeReason: string;
+  fronts: ShiftFrontEntry[];
   note?: string;
 }
 export interface QuarryProduct {

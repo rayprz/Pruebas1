@@ -5,6 +5,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  LabelList,
   Legend,
   ResponsiveContainer,
   Tooltip,
@@ -98,7 +99,7 @@ export default function CapexPage() {
       <Card className="mb-6 p-4">
         <span className="text-[11px] uppercase tracking-[0.12em] text-inkfaint">Annual CAPEX (USD)</span>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={byYear} margin={{ left: 8, right: 4, top: 12 }}>
+          <BarChart data={byYear.map((d) => ({ ...d, total: d.Overhaul + d.Replacement }))} margin={{ left: 8, right: 4, top: 22 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e8dfcd" vertical={false} />
             <XAxis dataKey="year" tick={{ fill: "#6c6356", fontSize: 12 }} tickLine={false} axisLine={{ stroke: "#e8dfcd" }} />
             <YAxis tickFormatter={(v) => usdCompact(Number(v))} tick={{ fill: "#a89e8c", fontSize: 12 }} tickLine={false} axisLine={false} width={56} />
@@ -109,7 +110,9 @@ export default function CapexPage() {
             />
             <Legend wrapperStyle={{ color: "#6c6356", fontSize: 12 }} />
             <Bar dataKey="Overhaul" stackId="a" fill="#6f7548" />
-            <Bar dataKey="Replacement" stackId="a" fill="#b06a3c" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="Replacement" stackId="a" fill="#b06a3c" radius={[4, 4, 0, 0]}>
+              <LabelList dataKey="total" position="top" formatter={(v: unknown) => (Number(v) > 0 ? usdCompact(Number(v)) : "")} style={{ fill: "#6c6356", fontSize: 11, fontWeight: 600 }} />
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </Card>

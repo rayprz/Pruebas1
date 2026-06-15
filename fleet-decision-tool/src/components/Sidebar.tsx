@@ -7,6 +7,7 @@ import {
   IconCapex,
   IconCatalog,
   IconCompare,
+  IconDashboard,
   IconQuarry,
   IconSites,
   IconTruck,
@@ -16,6 +17,10 @@ const GROUPS: {
   heading: string;
   items: { href: string; label: string; Icon: typeof IconTruck }[];
 }[] = [
+  {
+    heading: "Overview",
+    items: [{ href: "/dashboard", label: "Executive Dashboard", Icon: IconDashboard }],
+  },
   {
     heading: "Analyze",
     items: [
