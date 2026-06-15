@@ -20,8 +20,9 @@ import {
   ageMaintenanceMultiplier,
   maintenanceCostPerHr,
   usd,
+  usdCompact,
 } from "@/lib/engine";
-import { unitMaint, bySubsystem } from "@/lib/maintLog";
+import { unitMaint, bySubsystem, quarryMaint } from "@/lib/maintLog";
 import type { EquivalenceClass, FleetUnit, GlobalParams, MaintRecord, Quarry } from "@/lib/types";
 import { InfoTip } from "@/components/InfoTip";
 import { BrandBadge } from "@/components/BrandBadge";
@@ -81,6 +82,8 @@ export function MaintAnalysis({
           scheduledPct: m.scheduledPct,
           benchmark,
           vsBenchmark: benchmark > 0 ? m.perHour / benchmark : 0,
+          mtbf: m.mtbf,
+          availability: m.availability,
         };
       })
       .sort((a, b) => b.perHour - a.perHour);
@@ -117,6 +120,16 @@ export function MaintAnalysis({
     subsystem: s.subsystem, Preventive: s.preventive, Corrective: s.corrective, Overhaul: s.overhaul, total: s.total,
   })), [records, unitIds]);
 
+  // By-quarry maintenance $/ton & reliability (all classes, not just selected)
+  const qmaint = useMemo(() => {
+    const quarryByUnit = new Map(units.map((u) => [u.id, u.quarryId]));
+    const productionByQuarry = new Map(quarries.map((q) => [q.id, q.productionTons]));
+    return quarryMaint(records, quarryByUnit, productionByQuarry);
+  }, [records, units, quarries]);
+  const qRows = quarries
+    .map((q) => ({ q, m: qmaint.get(q.id) }))
+    .filter((x): x is { q: Quarry; m: NonNullable<ReturnType<typeof qmaint.get>> } => !!x.m);
+
   const flags = rows.filter((r) => r.vsBenchmark > 1.15);
 
   if (classesWithData.length === 0) {
@@ -148,6 +161,8 @@ export function MaintAnalysis({
                 <th className="px-3 py-3 text-right font-semibold">Benchmark</th>
                 <th className="px-3 py-3 text-right font-semibold">vs Bm</th>
                 <th className="px-3 py-3 text-right font-semibold">Sched%</th>
+                <th className="px-3 py-3 text-right font-semibold">MTBF <InfoTip title="Mean time between failures" formula="operating hours ÷ # corrective events" align="right" /></th>
+                <th className="px-3 py-3 text-right font-semibold">Avail <InfoTip title="Reliability availability" formula="uptime ÷ (uptime + corrective downtime)" align="right" /></th>
                 <th className="px-3 py-3 text-right font-semibold">Total $</th>
               </tr>
             </thead>
@@ -161,6 +176,8 @@ export function MaintAnalysis({
                   <td className="px-3 py-2 text-right tabular text-inkfaint">{usd(r.benchmark, 2)}</td>
                   <td className={`px-3 py-2 text-right tabular font-medium ${r.vsBenchmark > 1.15 ? "text-danger" : r.vsBenchmark > 1 ? "text-gold" : "text-olive"}`}>{(r.vsBenchmark * 100).toFixed(0)}%</td>
                   <td className={`px-3 py-2 text-right tabular ${r.scheduledPct >= 0.6 ? "text-olive" : "text-gold"}`}>{(r.scheduledPct * 100).toFixed(0)}%</td>
+                  <td className="px-3 py-2 text-right tabular text-inksoft">{Number.isFinite(r.mtbf) ? `${Math.round(r.mtbf)} h` : "—"}</td>
+                  <td className={`px-3 py-2 text-right tabular ${r.availability >= 0.95 ? "text-olive" : r.availability >= 0.9 ? "text-gold" : "text-danger"}`}>{(r.availability * 100).toFixed(1)}%</td>
                   <td className="px-3 py-2 text-right tabular text-inksoft">{usd(r.totalCost, 0)}</td>
                 </tr>
               ))}
@@ -205,6 +222,40 @@ export function MaintAnalysis({
           </ResponsiveContainer>
         </Card>
       </div>
+
+      {/* By quarry — $/ton & reliability */}
+      <Card className="overflow-hidden">
+        <div className="flex items-center gap-2 border-b border-line px-5 py-3">
+          <SectionTitle>Maintenance by quarry — $/ton &amp; reliability</SectionTitle>
+          <InfoTip title="Maintenance $/ton" formula="annualized maintenance $ ÷ quarry production (t/yr)" align="left">Annualized = logged $ × 12 ÷ months logged. Availability = uptime ÷ (uptime + corrective downtime).</InfoTip>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] text-sm">
+            <thead>
+              <tr className="border-b border-line text-left text-[11px] uppercase tracking-[0.1em] text-inkfaint">
+                <th className="px-5 py-3 font-semibold">Quarry</th>
+                <th className="px-3 py-3 font-semibold">Region</th>
+                <th className="px-3 py-3 text-right font-semibold">Units</th>
+                <th className="px-3 py-3 text-right font-semibold">Annualized $</th>
+                <th className="px-3 py-3 text-right font-semibold">$/ton</th>
+                <th className="px-3 py-3 text-right font-semibold">Availability</th>
+              </tr>
+            </thead>
+            <tbody>
+              {qRows.map(({ q, m }) => (
+                <tr key={q.id} className="border-b border-line/60 last:border-0 hover:bg-panel/50">
+                  <td className="px-5 py-2 font-medium text-ink">{q.name}</td>
+                  <td className="px-3 py-2 text-inksoft">{q.region}</td>
+                  <td className="px-3 py-2 text-right tabular text-inksoft">{m.unitsWithData}</td>
+                  <td className="px-3 py-2 text-right tabular text-inksoft">{usdCompact(m.annualizedCost)}</td>
+                  <td className="px-3 py-2 text-right tabular font-semibold text-ink">{usd(m.perTon, 2)}</td>
+                  <td className={`px-3 py-2 text-right tabular ${m.availability >= 0.95 ? "text-olive" : m.availability >= 0.9 ? "text-gold" : "text-danger"}`}>{(m.availability * 100).toFixed(1)}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
       {/* Subsystem breakdown */}
       <Card className="p-5">

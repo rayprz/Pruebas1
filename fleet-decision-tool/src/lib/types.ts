@@ -123,6 +123,9 @@ export interface MaintLine {
   type: MaintType;
   cost: number;
   laborHours?: number;
+  /** Machine downtime hours caused by this line — drives MTBF/MTTR/availability
+   *  (mainly for corrective/unplanned events). */
+  downtimeHours?: number;
 }
 
 /** A unit's maintenance for one month, broken down into subsystem lines. */

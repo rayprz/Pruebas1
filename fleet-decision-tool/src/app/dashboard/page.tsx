@@ -15,7 +15,7 @@ import {
 import { usd, usdCompact } from "@/lib/engine";
 import { BASE_YEAR, CAPEX_HORIZON, useFleet } from "@/lib/fleetStore";
 import { quarryMetrics, type QuarryMetrics } from "@/lib/rollup";
-import { actualMaintPerHrByUnit } from "@/lib/maintLog";
+import { actualMaintPerHrByUnit, quarryMaint } from "@/lib/maintLog";
 import { useParams } from "@/lib/store";
 import { useCatalog } from "@/lib/catalogStore";
 import { useQuarry } from "@/lib/quarryStore";
@@ -47,6 +47,12 @@ export default function DashboardPage() {
     ],
     [regions, quarries]
   );
+
+  const maintByQuarry = useMemo(() => {
+    const quarryByUnit = new Map(units.map((u) => [u.id, u.quarryId]));
+    const productionByQuarry = new Map(quarries.map((q) => [q.id, q.productionTons]));
+    return quarryMaint(maintRecords, quarryByUnit, productionByQuarry);
+  }, [maintRecords, units, quarries]);
 
   const includedQuarries = useMemo(() => {
     if (scope.startsWith("region:")) return quarries.filter((q) => q.region === scope.slice(7));
@@ -87,16 +93,27 @@ export default function DashboardPage() {
     }
     return [...m.entries()]
       .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([region, list]) => ({
-        region,
-        list,
-        operating: list.reduce((s, x) => s + x.operating, 0),
-        excess: list.reduce((s, x) => s + x.excess, 0),
-        losses: list.reduce((s, x) => s + x.lossesUsd, 0),
-        systemTph: list.reduce((s, x) => s + x.systemTph, 0),
-        attainment: list.length ? list.reduce((s, x) => s + x.attainment, 0) / list.length : 0,
-      }));
-  }, [metrics]);
+      .map(([region, list]) => {
+        const annualized = list.reduce((s, x) => s + (maintByQuarry.get(x.quarry.id)?.annualizedCost ?? 0), 0);
+        const production = list.reduce((s, x) => s + x.quarry.productionTons, 0);
+        return {
+          region,
+          list,
+          operating: list.reduce((s, x) => s + x.operating, 0),
+          excess: list.reduce((s, x) => s + x.excess, 0),
+          losses: list.reduce((s, x) => s + x.lossesUsd, 0),
+          systemTph: list.reduce((s, x) => s + x.systemTph, 0),
+          attainment: list.length ? list.reduce((s, x) => s + x.attainment, 0) / list.length : 0,
+          maintPerTon: production > 0 ? annualized / production : 0,
+        };
+      });
+  }, [metrics, maintByQuarry]);
+
+  const aggMaintPerTon = useMemo(() => {
+    const annualized = metrics.reduce((s, m) => s + (maintByQuarry.get(m.quarry.id)?.annualizedCost ?? 0), 0);
+    const production = metrics.reduce((s, m) => s + m.quarry.productionTons, 0);
+    return production > 0 ? annualized / production : 0;
+  }, [metrics, maintByQuarry]);
 
   return (
     <div>
@@ -130,6 +147,7 @@ export default function DashboardPage() {
                 <th className="px-3 py-3 text-right font-semibold">System tph</th>
                 <th className="px-3 py-3 text-right font-semibold">Attain.</th>
                 <th className="px-3 py-3 text-right font-semibold">Cost/ton</th>
+                <th className="px-3 py-3 text-right font-semibold">Maint $/t <InfoTip title="Maintenance $/ton" formula="annualized logged maintenance ÷ quarry production" align="right" /></th>
                 <th className="px-3 py-3 text-right font-semibold">Fleet OPEX</th>
                 <th className="px-3 py-3 text-right font-semibold">Excess OPEX</th>
                 <th className="px-3 py-3 text-right font-semibold">Losses/yr</th>
@@ -143,6 +161,7 @@ export default function DashboardPage() {
                     <td className="px-3 py-1.5 text-right tabular">{Math.round(rg.systemTph).toLocaleString()}</td>
                     <td className="px-3 py-1.5 text-right tabular">{(rg.attainment * 100).toFixed(0)}%</td>
                     <td className="px-3 py-1.5" />
+                    <td className="px-3 py-1.5 text-right tabular">{usd(rg.maintPerTon, 2)}</td>
                     <td className="px-3 py-1.5 text-right tabular">{usdCompact(rg.operating)}</td>
                     <td className="px-3 py-1.5 text-right tabular">{usdCompact(Math.max(0, rg.excess))}</td>
                     <td className="px-3 py-1.5 text-right tabular">{usdCompact(rg.losses)}</td>
@@ -154,6 +173,7 @@ export default function DashboardPage() {
                       <td className="px-3 py-2 text-right tabular text-inksoft">{Math.round(m.systemTph).toLocaleString()}</td>
                       <td className={`px-3 py-2 text-right tabular font-medium ${m.attainment >= 0.9 ? "text-olive" : m.attainment >= 0.75 ? "text-gold" : "text-danger"}`}>{(m.attainment * 100).toFixed(0)}%</td>
                       <td className="px-3 py-2 text-right tabular text-inksoft">{usd(m.costPerTon, 2)}</td>
+                      <td className="px-3 py-2 text-right tabular text-inksoft">{usd(maintByQuarry.get(m.quarry.id)?.perTon ?? 0, 2)}</td>
                       <td className="px-3 py-2 text-right tabular text-inksoft">{usdCompact(m.operating)}</td>
                       <td className={`px-3 py-2 text-right tabular ${m.excess > 0 ? "text-danger" : "text-olive"}`}>{usdCompact(Math.max(0, m.excess))}</td>
                       <td className="px-3 py-2 text-right tabular text-danger">{usdCompact(m.lossesUsd)}</td>
@@ -164,6 +184,7 @@ export default function DashboardPage() {
               {byRegion.length > 1 && (
                 <tr className="border-t-2 border-line-strong font-semibold text-ink">
                   <td className="px-5 py-2" colSpan={5}>All quarries</td>
+                  <td className="px-3 py-2 text-right tabular">{usd(aggMaintPerTon, 2)}</td>
                   <td className="px-3 py-2 text-right tabular">{usdCompact(agg.operating)}</td>
                   <td className="px-3 py-2 text-right tabular">{usdCompact(Math.max(0, agg.excess))}</td>
                   <td className="px-3 py-2 text-right tabular text-danger">{usdCompact(agg.losses)}</td>

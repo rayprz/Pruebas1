@@ -26,7 +26,7 @@ export const SUBSYSTEMS = [
   "Other",
 ];
 
-type LineSeed = [subsystem: string, type: MaintType, cost: number, labor?: number];
+type LineSeed = [subsystem: string, type: MaintType, cost: number, labor?: number, downtime?: number];
 
 const rec = (
   id: string,
@@ -45,6 +45,8 @@ const rec = (
     type: l[1],
     cost: l[2],
     laborHours: l[3],
+    // Unplanned downtime ≈ a third of corrective labor when not given explicitly
+    downtimeHours: l[4] ?? (l[1] === "corrective" && l[3] ? Math.round((l[3] as number) / 3) : undefined),
   })),
 });
 

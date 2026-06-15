@@ -12,6 +12,15 @@ export interface UnitMaint {
   byType: Record<MaintType, number>;
   bySubsystem: { subsystem: string; cost: number }[];
   months: number;
+  // Reliability (from corrective / unplanned events)
+  failures: number;
+  downtimeHours: number;
+  /** Mean time between failures, operating hours */
+  mtbf: number;
+  /** Mean time to repair, downtime hours per failure */
+  mttr: number;
+  /** Reliability availability = uptime ÷ (uptime + downtime) */
+  availability: number;
 }
 
 /** Per-unit maintenance rollup over the given records. */
@@ -23,7 +32,8 @@ export function unitMaint(records: MaintRecord[]): Map<string, UnitMaint> {
       u = {
         unitId: r.unitId, totalCost: 0, totalHours: 0, perHour: 0, laborHours: 0,
         scheduledPct: 0, byType: { preventive: 0, corrective: 0, overhaul: 0 },
-        bySubsystem: [], months: 0, _subs: new Map(), _months: new Set(),
+        bySubsystem: [], months: 0, failures: 0, downtimeHours: 0, mtbf: 0, mttr: 0, availability: 1,
+        _subs: new Map(), _months: new Set(),
       };
       map.set(r.unitId, u);
     }
@@ -34,6 +44,10 @@ export function unitMaint(records: MaintRecord[]): Map<string, UnitMaint> {
       u.byType[l.type] += l.cost;
       u.laborHours += l.laborHours ?? 0;
       u._subs.set(l.subsystem, (u._subs.get(l.subsystem) ?? 0) + l.cost);
+      if (l.type === "corrective") {
+        u.failures += 1;
+        u.downtimeHours += l.downtimeHours ?? 0;
+      }
     }
   }
   const out = new Map<string, UnitMaint>();
@@ -48,6 +62,59 @@ export function unitMaint(records: MaintRecord[]): Map<string, UnitMaint> {
       byType: u.byType,
       bySubsystem: [...u._subs.entries()].map(([subsystem, cost]) => ({ subsystem, cost })).sort((a, b) => b.cost - a.cost),
       months: u._months.size,
+      failures: u.failures,
+      downtimeHours: u.downtimeHours,
+      mtbf: u.failures > 0 ? u.totalHours / u.failures : Infinity,
+      mttr: u.failures > 0 ? u.downtimeHours / u.failures : 0,
+      availability: u.totalHours + u.downtimeHours > 0 ? u.totalHours / (u.totalHours + u.downtimeHours) : 1,
+    });
+  }
+  return out;
+}
+
+export interface QuarryMaint {
+  quarryId: string;
+  totalCost: number;
+  months: number;
+  annualizedCost: number;
+  perTon: number;
+  availability: number;
+  unitsWithData: number;
+}
+
+/** Per-quarry maintenance rollup: annualized cost and $/ton vs production. */
+export function quarryMaint(
+  records: MaintRecord[],
+  quarryByUnit: Map<string, string>,
+  productionByQuarry: Map<string, number>
+): Map<string, QuarryMaint> {
+  const acc = new Map<string, { cost: number; months: Set<string>; up: number; down: number; units: Set<string> }>();
+  for (const r of records) {
+    const qid = quarryByUnit.get(r.unitId);
+    if (!qid) continue;
+    const a = acc.get(qid) ?? { cost: 0, months: new Set<string>(), up: 0, down: 0, units: new Set<string>() };
+    a.months.add(r.month);
+    a.units.add(r.unitId);
+    a.up += r.hours;
+    for (const l of r.lines) {
+      a.cost += l.cost;
+      if (l.type === "corrective") a.down += l.downtimeHours ?? 0;
+    }
+    acc.set(qid, a);
+  }
+  const out = new Map<string, QuarryMaint>();
+  for (const [qid, a] of acc) {
+    const months = a.months.size || 1;
+    const annualized = a.cost * (12 / months);
+    const production = productionByQuarry.get(qid) ?? 0;
+    out.set(qid, {
+      quarryId: qid,
+      totalCost: a.cost,
+      months: a.months.size,
+      annualizedCost: annualized,
+      perTon: production > 0 ? annualized / production : 0,
+      availability: a.up + a.down > 0 ? a.up / (a.up + a.down) : 1,
+      unitsWithData: a.units.size,
     });
   }
   return out;
@@ -106,7 +173,7 @@ export function bySubsystem(records: MaintRecord[], unitIds?: Set<string>): Subs
 
 // --- CSV (long format: one row per maintenance line) -----------------------
 
-const COLUMNS = ["unitNo", "month", "hours", "subsystem", "type", "cost", "laborHours", "note"] as const;
+const COLUMNS = ["unitNo", "month", "hours", "subsystem", "type", "cost", "laborHours", "downtimeHours", "note"] as const;
 const TYPES = new Set<MaintType>(["preventive", "corrective", "overhaul"]);
 
 function esc(v: string): string {
@@ -126,6 +193,7 @@ export function maintToCsv(records: MaintRecord[], unitNoById: Map<string, strin
           esc(l.type),
           String(l.cost),
           String(l.laborHours ?? ""),
+          String(l.downtimeHours ?? ""),
           esc(r.note ?? ""),
         ].join(",")
       );
@@ -181,6 +249,7 @@ export function csvToMaint(text: string, unitIdByNo: Map<string, string>): Maint
       type: TYPES.has(t) ? t : "corrective",
       cost: num("cost"),
       laborHours: get("laborHours") ? num("laborHours") : undefined,
+      downtimeHours: get("downtimeHours") ? num("downtimeHours") : undefined,
     });
   }
   return { records: [...map.values()], errors };

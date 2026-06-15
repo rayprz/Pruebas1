@@ -37,9 +37,9 @@ const TYPE_STYLE: Record<MaintType, string> = {
   overhaul: "bg-accentsoft text-accentink",
 };
 
-const TEMPLATE = `unitNo,month,hours,subsystem,type,cost,laborHours,note
-HT-01,2026-05,420,Engine,corrective,14000,60,
-HT-01,2026-05,420,Tires,preventive,8000,,`;
+const TEMPLATE = `unitNo,month,hours,subsystem,type,cost,laborHours,downtimeHours,note
+HT-01,2026-05,420,Engine,corrective,14000,60,20,
+HT-01,2026-05,420,Tires,preventive,8000,,,`;
 
 export default function MaintenancePage() {
   const { params } = useParams();
