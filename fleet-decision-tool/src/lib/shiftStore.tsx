@@ -9,8 +9,9 @@ import {
   type ReactNode,
 } from "react";
 import type { ShiftFrontEntry, ShiftRecord } from "./types";
+import { HISTORY_MONTHS } from "./periodStore";
 
-const KEY = "fleet-tool-shifts-v2";
+const KEY = "fleet-tool-shifts-v3";
 
 type Entry = [front: string, tons: number, downtime: number, reason: string];
 
@@ -35,35 +36,42 @@ const rec = (
   })),
 });
 
-const SEED: ShiftRecord[] = [
-  // ===== Tepeaca (North + South Limestone) =====
-  rec("t1", "q-tepeaca", "2026-06-01", "A", [["North Limestone", 9300, 1.0, "Waiting on trucks"], ["South Limestone", 6500, 1.5, "Loader breakdown"]]),
-  rec("t2", "q-tepeaca", "2026-06-01", "B", [["North Limestone", 8200, 2.5, "Crusher liner change"], ["South Limestone", 5900, 2.0, "Waiting on trucks"]]),
-  rec("t3", "q-tepeaca", "2026-06-02", "A", [["North Limestone", 9800, 0.8, "Blast clearance"], ["South Limestone", 6900, 1.0, "Blast clearance"]]),
-  rec("t4", "q-tepeaca", "2026-06-02", "B", [["North Limestone", 7400, 3.0, "Truck breakdown"], ["South Limestone", 5600, 2.2, "Waiting on trucks"]]),
-  rec("t5", "q-tepeaca", "2026-06-03", "A", [["North Limestone", 9900, 0.8, "Conveyor jam"], ["South Limestone", 7000, 0.7, "Road maintenance"]]),
-  rec("t6", "q-tepeaca", "2026-06-03", "B", [["North Limestone", 8600, 2.0, "Waiting on trucks"], ["South Limestone", 6100, 1.8, "Truck breakdown"]]),
-  rec("t7", "q-tepeaca", "2026-06-04", "A", [["North Limestone", 9500, 1.2, "Blast clearance"], ["South Limestone", 6700, 1.0, "Loader breakdown"]]),
-  rec("t8", "q-tepeaca", "2026-06-04", "B", [["North Limestone", 6300, 4.0, "Power outage"], ["South Limestone", 4800, 4.0, "Power outage"]]),
-  rec("t9", "q-tepeaca", "2026-06-05", "A", [["North Limestone", 9100, 1.5, "Crusher liner change"], ["South Limestone", 6600, 1.3, "Waiting on trucks"]]),
-  rec("t10", "q-tepeaca", "2026-06-05", "B", [["North Limestone", 8400, 2.2, "Waiting on trucks"], ["South Limestone", 5900, 2.5, "Truck breakdown"]]),
-  rec("t11", "q-tepeaca", "2026-06-06", "A", [["North Limestone", 10200, 0.5, "Planned maintenance"], ["South Limestone", 7200, 0.8, "Blast clearance"]]),
-  rec("t12", "q-tepeaca", "2026-06-06", "B", [["North Limestone", 7800, 2.8, "Truck breakdown"], ["South Limestone", 5700, 2.0, "Waiting on trucks"]]),
-  // ===== Atotonilco (Main Face) =====
-  rec("a1", "q-atotonilco", "2026-06-01", "A", [["Main Face", 6800, 1.0, "Waiting on trucks"]]),
-  rec("a2", "q-atotonilco", "2026-06-01", "B", [["Main Face", 5900, 2.2, "Crusher liner change"]]),
-  rec("a3", "q-atotonilco", "2026-06-02", "A", [["Main Face", 7000, 0.8, "Blast clearance"]]),
-  rec("a4", "q-atotonilco", "2026-06-02", "B", [["Main Face", 5200, 3.0, "Truck breakdown"]]),
-  rec("a5", "q-atotonilco", "2026-06-03", "A", [["Main Face", 6600, 1.2, "Waiting on trucks"]]),
-  rec("a6", "q-atotonilco", "2026-06-03", "B", [["Main Face", 6100, 1.8, "Conveyor jam"]]),
-  // ===== Monterrey (Main Pit) — under-trucked, more downtime =====
-  rec("o1", "q-monterrey", "2026-06-01", "A", [["Main Pit", 4100, 1.5, "Waiting on trucks"]]),
-  rec("o2", "q-monterrey", "2026-06-01", "B", [["Main Pit", 3300, 3.0, "Truck breakdown"]]),
-  rec("o3", "q-monterrey", "2026-06-02", "A", [["Main Pit", 4300, 1.2, "Waiting on trucks"]]),
-  rec("o4", "q-monterrey", "2026-06-02", "B", [["Main Pit", 2900, 4.0, "Power outage"]]),
-  rec("o5", "q-monterrey", "2026-06-03", "A", [["Main Pit", 4000, 1.8, "Waiting on trucks"]]),
-  rec("o6", "q-monterrey", "2026-06-03", "B", [["Main Pit", 3600, 2.5, "Crusher liner change"]]),
+// Fronts logged per quarry (the crusher-feeding faces), with a base tons/shift.
+const QUARRY_FRONTS: Record<string, [front: string, baseTons: number][]> = {
+  "q-tepeaca": [["North Limestone", 9200], ["South Limestone", 6500]],
+  "q-atotonilco": [["Main Face", 6500]],
+  "q-monterrey": [["Main Pit", 3900]],
+};
+const REASONS = [
+  "Waiting on trucks", "Crusher liner change", "Blast clearance", "Truck breakdown",
+  "Loader breakdown", "Conveyor jam", "Planned maintenance", "Power outage",
 ];
+// Representative shift-days per month (day-of-month, shift). Deterministic.
+const SHIFT_DAYS: [day: string, shift: string][] = [["08", "A"], ["18", "B"], ["24", "A"]];
+
+// Generate 12 months of shift actuals for every quarry, with a gentle upward
+// attainment trend so the production trend tells a story. Deterministic.
+function genShifts(): ShiftRecord[] {
+  const out: ShiftRecord[] = [];
+  HISTORY_MONTHS.forEach((month, mi) => {
+    const trend = 0.85 + 0.012 * mi; // attainment climbs ~0.85 → ~1.0 over the year
+    SHIFT_DAYS.forEach(([day, sh], di) => {
+      Object.entries(QUARRY_FRONTS).forEach(([qid, fronts], qi) => {
+        const entries: Entry[] = fronts.map(([front, base], fi) => {
+          const noise = 1 + 0.08 * Math.sin(mi * 1.3 + di * 2 + fi + qi);
+          const tons = Math.round(base * trend * noise);
+          const downtime = Math.max(0.5, Math.round((1.2 + 1.3 * Math.abs(Math.sin(mi + di * 1.7 + fi + qi))) * 10) / 10);
+          const reason = REASONS[(mi + di + fi + qi) % REASONS.length];
+          return [front, tons, downtime, reason];
+        });
+        out.push(rec(`${qid}-${month}-${day}-${sh}`, qid, `${month}-${day}`, sh, entries));
+      });
+    });
+  });
+  return out;
+}
+
+const SEED: ShiftRecord[] = genShifts();
 
 interface ShiftStore {
   records: ShiftRecord[];

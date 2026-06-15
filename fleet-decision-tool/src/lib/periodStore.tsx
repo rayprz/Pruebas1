@@ -13,10 +13,9 @@ const KEY = "fleet-tool-period-v2";
 
 export type Preset = "3" | "6" | "12" | "all";
 
-/** Canonical monthly timeline (oldest → newest), spanning 2025–2026 so the
- *  filter can select specific months and whole years. */
+/** Canonical monthly timeline (oldest → newest): the most recent 12 months,
+ *  spanning 2025–2026 so the filter can select specific months and years. */
 export const HISTORY_MONTHS = [
-  "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06",
   "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12",
   "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06",
 ];
