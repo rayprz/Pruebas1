@@ -19,7 +19,10 @@ const GROUPS: {
 }[] = [
   {
     heading: "Overview",
-    items: [{ href: "/dashboard", label: "Executive Dashboard", Icon: IconDashboard }],
+    items: [
+      { href: "/dashboard", label: "Executive Dashboard", Icon: IconDashboard },
+      { href: "/compare-quarries", label: "Compare Quarries", Icon: IconQuarry },
+    ],
   },
   {
     heading: "Analyze",

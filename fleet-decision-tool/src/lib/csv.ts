@@ -8,7 +8,7 @@ const COLUMNS = [
   "currentHours",
   "annualHours",
   "availability",
-  "site",
+  "quarryId",
   "status",
 ] as const;
 
@@ -106,7 +106,7 @@ export function csvToUnits(text: string): ParseResult {
       currentHours: num("currentHours"),
       annualHours: num("annualHours", 4000),
       availability: num("availability", 0.85),
-      site: get("site") || "Unassigned",
+      quarryId: get("quarryId") || "q-tepeaca",
       status: (STATUSES.has(status) ? status : "active") as FleetUnit["status"],
     });
   }

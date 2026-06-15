@@ -82,23 +82,9 @@ export interface FleetUnit {
   annualHours: number;
   /** Mechanical availability, 0..1 (used by the Quarry model) */
   availability: number;
-  /** Work area / site this unit is assigned to */
-  site: string;
+  /** The quarry (site) this unit belongs to — Quarry id */
+  quarryId: string;
   status: "active" | "standby" | "down";
-}
-
-/** A work area with a yearly production target served by a loader+truck pair. */
-export interface Site {
-  id: string;
-  name: string;
-  /** Required production, short tons per year */
-  productionTons: number;
-  /** Haul distance, one-way km (drives truck cycle time) */
-  haulKm: number;
-  /** Loader/excavator class assigned to load */
-  loaderClassId: string;
-  /** Haul-truck class assigned */
-  truckClassId: string;
 }
 
 /** One front's actual contribution within a logged shift. */
@@ -116,6 +102,8 @@ export interface ShiftFrontEntry {
 /** A logged production shift, broken down by front, for actual-vs-model tracking. */
 export interface ShiftRecord {
   id: string;
+  /** The quarry this shift belongs to — Quarry id */
+  quarryId: string;
   /** ISO date yyyy-mm-dd */
   date: string;
   /** Shift label, e.g. "A" / "B" / "Night" */
@@ -187,6 +175,24 @@ export interface QuarryConfig {
   // Fronts & products
   fronts: QuarryFront[];
   products: QuarryProduct[];
+}
+
+/** A quarry = a site: the top-level operation. Owns its detailed performance
+ *  model (config), plus coarse sizing inputs reused by Sites & Production.
+ *  Grouped by region for VP-level rollups (Región → Cantera). */
+export interface Quarry {
+  id: string;
+  name: string;
+  region: string;
+  config: QuarryConfig;
+  /** Annual production target (short tons) for excess-OPEX sizing */
+  productionTons: number;
+  /** Representative one-way haul (km) for sizing */
+  haulKm: number;
+  /** Representative loader class for sizing */
+  loaderClassId: string;
+  /** Representative haul-truck class for sizing */
+  truckClassId: string;
 }
 
 export interface EquipmentModel {

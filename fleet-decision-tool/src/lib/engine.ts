@@ -6,7 +6,6 @@ import type {
   GlobalParams,
   Scenario,
   Severity,
-  Site,
 } from "./types";
 
 /** Scenario → maintenance/fuel severity column, per the OEM workbook. */
@@ -273,7 +272,7 @@ export interface SizingResult {
 }
 
 export function sizeSite(
-  site: Site,
+  site: { haulKm: number; productionTons: number },
   truckCls: EquivalenceClass,
   annualHours: number,
   trucksPerLoader: number

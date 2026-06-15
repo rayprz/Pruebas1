@@ -41,13 +41,22 @@ const TEMPLATE = `date,shift,scheduledHours,front,tons,downtimeHours,downtimeRea
 2026-06-08,A,10,South Limestone,6800,1.2,Blast clearance,
 2026-06-08,B,10,North Limestone,8200,2.5,Crusher liner change,`;
 
-export function QuarryActuals({ model, config }: { model: QuarryResult; config: QuarryConfig }) {
-  const { records, addEntry, updateEntry, removeEntry, updateRecordMeta, replaceRecords, reset } =
+export function QuarryActuals({
+  model,
+  config,
+  quarryId,
+}: {
+  model: QuarryResult;
+  config: QuarryConfig;
+  quarryId: string;
+}) {
+  const { records: allRecords, addEntry, updateEntry, removeEntry, updateRecordMeta, replaceRecords, reset } =
     useShiftLog();
   const [adding, setAdding] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const records = useMemo(() => allRecords.filter((r) => r.quarryId === quarryId), [allRecords, quarryId]);
   const targetTph = config.targetTph;
   const modelByFront = useMemo(
     () => new Map(model.fronts.map((f) => [f.name, f.delivered])),
@@ -85,8 +94,8 @@ export function QuarryActuals({ model, config }: { model: QuarryResult; config: 
     const file = e.target.files?.[0];
     if (!file) return;
     const text = await file.text();
-    const { records: parsed, errors } = csvToShifts(text);
-    if (parsed.length) replaceRecords(parsed);
+    const { records: parsed, errors } = csvToShifts(text, quarryId);
+    if (parsed.length) replaceRecords([...allRecords.filter((r) => r.quarryId !== quarryId), ...parsed]);
     setImportMsg(
       parsed.length
         ? `Imported ${parsed.length} shifts.${errors.length ? ` ${errors[0]}` : ""}`
@@ -243,7 +252,13 @@ export function QuarryActuals({ model, config }: { model: QuarryResult; config: 
         </div>
       </div>
       {importMsg && <p className="mb-2 text-xs text-inksoft">{importMsg}</p>}
-      {adding && <AddEntryForm frontOptions={frontOptions} onClose={() => setAdding(false)} onAdd={addEntry} />}
+      {adding && (
+        <AddEntryForm
+          frontOptions={frontOptions}
+          onClose={() => setAdding(false)}
+          onAdd={(date, shift, sched, entry) => addEntry(quarryId, date, shift, sched, entry)}
+        />
+      )}
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">

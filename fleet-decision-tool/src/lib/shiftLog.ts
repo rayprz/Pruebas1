@@ -224,7 +224,7 @@ export interface ShiftParseResult {
   errors: string[];
 }
 
-export function csvToShifts(text: string): ShiftParseResult {
+export function csvToShifts(text: string, quarryId: string): ShiftParseResult {
   const errors: string[] = [];
   const lines = text
     .split(/\r?\n/)
@@ -260,6 +260,7 @@ export function csvToShifts(text: string): ShiftParseResult {
     if (!map.has(key)) {
       map.set(key, {
         id: `s-imp-${Date.now()}-${map.size}`,
+        quarryId,
         date,
         shift,
         scheduledHours: num("scheduledHours", 10),

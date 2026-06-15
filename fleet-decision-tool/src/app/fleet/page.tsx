@@ -12,6 +12,7 @@ import {
 import { useParams } from "@/lib/store";
 import { useCatalog } from "@/lib/catalogStore";
 import { useFleet } from "@/lib/fleetStore";
+import { useQuarry } from "@/lib/quarryStore";
 import { csvToUnits, downloadCsv, unitsToCsv } from "@/lib/csv";
 import type { FleetUnit, Scenario } from "@/lib/types";
 import { BrandBadge } from "@/components/BrandBadge";
@@ -29,20 +30,29 @@ import {
   TextInput,
 } from "@/components/ui";
 
-const TEMPLATE = `unitNo,classId,modelId,year,currentHours,annualHours,availability,site,status
-HT-101,ht-777,cat-777g,2019,28000,5000,0.85,Limestone Quarry,active
-LD-201,pl-992,km-wa800,2021,16000,4500,0.9,Limestone Quarry,active`;
+const TEMPLATE = `unitNo,classId,modelId,year,currentHours,annualHours,availability,quarryId,status
+HT-101,ht-777,cat-777g,2019,28000,5000,0.85,q-tepeaca,active
+LD-201,pl-992,km-wa800,2021,16000,4500,0.9,q-tepeaca,active`;
 
 export default function FleetPage() {
   const { params } = useParams();
   const { classById, classes } = useCatalog();
   const { units, addUnit, updateUnit, removeUnit, replaceUnits, resetAll } = useFleet();
+  const { quarries } = useQuarry();
   const [scenario, setScenario] = useState<Scenario>("medium");
+  const [quarryFilter, setQuarryFilter] = useState<string>("all");
   const [adding, setAdding] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const modelById = useMemo(() => new Map(MODELS.map((m) => [m.id, m])), []);
+  const quarryName = useMemo(() => new Map(quarries.map((q) => [q.id, q.name])), [quarries]);
+  const quarryOptions = quarries.map((q) => ({ value: q.id, label: q.name }));
+
+  const visibleUnits = useMemo(
+    () => (quarryFilter === "all" ? units : units.filter((u) => u.quarryId === quarryFilter)),
+    [units, quarryFilter]
+  );
 
   const { rows, invalid } = useMemo(() => {
     const rows = [] as {
@@ -53,7 +63,7 @@ export default function FleetPage() {
       lifePct: number;
     }[];
     const invalid: FleetUnit[] = [];
-    for (const u of units) {
+    for (const u of visibleUnits) {
       const cls = classById.get(u.classId);
       if (!cls) {
         invalid.push(u);
@@ -66,15 +76,15 @@ export default function FleetPage() {
       rows.push({ u, cls, model, cost, lifePct });
     }
     return { rows, invalid };
-  }, [units, scenario, classById, modelById, params]);
+  }, [visibleUnits, scenario, classById, modelById, params]);
 
   const totals = useMemo(() => {
     const operating = rows.reduce((s, r) => s + r.cost.operating, 0);
     const owning = rows.reduce((s, r) => s + r.cost.owning, 0);
-    const active = units.filter((u) => u.status === "active").length;
+    const active = visibleUnits.filter((u) => u.status === "active").length;
     const nearEol = rows.filter((r) => r.lifePct >= 0.8).length;
     return { operating, owning, total: operating + owning, active, nearEol };
-  }, [rows, units]);
+  }, [rows, visibleUnits]);
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -132,16 +142,23 @@ export default function FleetPage() {
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Units" value={units.length} sub={`${totals.active} active`} />
+        <StatCard label="Units" value={visibleUnits.length} sub={`${totals.active} active`} />
         <StatCard label="Fleet OPEX / yr" value={usdCompact(totals.operating)} sub="fuel + maint + operator" tone="accent" />
         <StatCard label="Owning / yr" value={usdCompact(totals.owning)} sub="deprec. + capital + insurance" />
         <StatCard label="Near end-of-life" value={totals.nearEol} sub="≥ 80% of life hours" tone={totals.nearEol > 0 ? "danger" : "olive"} />
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
+        <span className="text-[11px] uppercase tracking-[0.12em] text-inkfaint">Quarry</span>
+        <Select
+          value={quarryFilter}
+          onChange={setQuarryFilter}
+          options={[{ value: "all", label: "All quarries" }, ...quarryOptions]}
+        />
+        <span className="mx-1 h-5 w-px bg-line" />
         <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={onFile} className="hidden" />
         <Button variant="ghost" onClick={() => fileRef.current?.click()}>Import CSV</Button>
-        <Button variant="ghost" onClick={() => downloadCsv("my-fleet.csv", unitsToCsv(units))}>Export CSV</Button>
+        <Button variant="ghost" onClick={() => downloadCsv("my-fleet.csv", unitsToCsv(visibleUnits))}>Export CSV</Button>
         <Button variant="ghost" onClick={() => downloadCsv("fleet-template.csv", TEMPLATE)}>Download template</Button>
         {importMsg && <span className="text-xs text-inksoft">{importMsg}</span>}
       </div>
@@ -163,7 +180,7 @@ export default function FleetPage() {
               <tr className="border-b border-line text-left text-[11px] uppercase tracking-[0.1em] text-inkfaint">
                 <th className="px-4 py-3 font-semibold">Unit</th>
                 <th className="px-4 py-3 font-semibold">Model</th>
-                <th className="px-4 py-3 font-semibold">Site</th>
+                <th className="px-4 py-3 font-semibold">Quarry</th>
                 <th className="px-4 py-3 text-right font-semibold">Hours</th>
                 <th className="px-4 py-3 text-right font-semibold">
                   Life <InfoTip title="Life used" formula="current hours ÷ life hours" align="right">Hover a unit's % for the resulting maintenance age factor.</InfoTip>
@@ -196,7 +213,7 @@ export default function FleetPage() {
                     </div>
                   </td>
                   <td className="px-4 py-2">
-                    <TextInput value={u.site} onChange={(v) => updateUnit(u.id, { site: v })} className="w-36 !py-0.5" />
+                    <Select value={u.quarryId} onChange={(v) => updateUnit(u.id, { quarryId: v })} options={quarryOptions} className="!py-0.5" />
                   </td>
                   <td className="px-4 py-2 text-right">
                     <input type="number" value={u.currentHours} onChange={(e) => updateUnit(u.id, { currentHours: Number(e.target.value) })}
@@ -255,10 +272,12 @@ export default function FleetPage() {
 
 function AddUnitForm({ onClose, onAdd }: { onClose: () => void; onAdd: (u: FleetUnit) => void }) {
   const { classes } = useCatalog();
+  const { quarries } = useQuarry();
   const classOptions = classes.map((c) => ({
     value: c.id,
     label: `${CATEGORY_LABELS[c.category]} · ${c.name}`,
   }));
+  const quarryOptions = quarries.map((q) => ({ value: q.id, label: q.name }));
   const [classId, setClassId] = useState(classes[0]?.id ?? "");
   const modelsForClass = MODELS.filter((m) => m.classId === classId);
   const [modelId, setModelId] = useState(modelsForClass[0]?.id ?? "");
@@ -267,7 +286,7 @@ function AddUnitForm({ onClose, onAdd }: { onClose: () => void; onAdd: (u: Fleet
   const [currentHours, setCurrentHours] = useState(0);
   const [annualHours, setAnnualHours] = useState(4000);
   const [availability, setAvailability] = useState(0.85);
-  const [site, setSite] = useState("");
+  const [quarryId, setQuarryId] = useState(quarries[0]?.id ?? "");
 
   const handleClass = (id: string) => {
     setClassId(id);
@@ -284,7 +303,7 @@ function AddUnitForm({ onClose, onAdd }: { onClose: () => void; onAdd: (u: Fleet
       currentHours,
       annualHours,
       availability,
-      site: site || "Unassigned",
+      quarryId: quarryId || quarries[0]?.id || "",
       status: "active",
     });
     onClose();
@@ -306,8 +325,8 @@ function AddUnitForm({ onClose, onAdd }: { onClose: () => void; onAdd: (u: Fleet
           <TextInput value={unitNo} onChange={setUnitNo} placeholder="HT-01" className="w-full" />
         </label>
         <label className="space-y-1 text-sm">
-          <span className="text-inksoft">Site</span>
-          <TextInput value={site} onChange={setSite} placeholder="Limestone Quarry" className="w-full" />
+          <span className="text-inksoft">Quarry</span>
+          <Select value={quarryId} onChange={setQuarryId} options={quarryOptions} className="w-full" />
         </label>
         <NumberField label="Year" value={year} onChange={setYear} />
         <NumberField label="Current hours" value={currentHours} onChange={setCurrentHours} step={100} />

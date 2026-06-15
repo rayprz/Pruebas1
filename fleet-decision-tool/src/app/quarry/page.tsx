@@ -56,11 +56,16 @@ export default function QuarryPage() {
   const { classById, classes } = useCatalog();
   const { units } = useFleet();
   const q = useQuarry();
-  const { config } = q;
+  const { config, active } = q;
 
   const [tab, setTab] = useState<"model" | "actuals">("model");
 
-  const unitsById = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
+  // Only this quarry's units take part in its model
+  const quarryUnits = useMemo(
+    () => units.filter((u) => u.quarryId === q.activeQuarryId),
+    [units, q.activeQuarryId]
+  );
+  const unitsById = useMemo(() => new Map(quarryUnits.map((u) => [u.id, u])), [quarryUnits]);
 
   const r = useMemo(
     () => computeQuarry(config, classById, params, unitsById),
@@ -69,14 +74,14 @@ export default function QuarryPage() {
 
   const loaderOptions = classes.filter((c) => LOADER_CATS.includes(c.category)).map((c) => ({ value: c.id, label: c.name }));
 
-  // Haul trucks from My Fleet, and where each is currently assigned
+  // Haul trucks from this quarry's fleet, and where each is currently assigned
   const truckUnits = useMemo(
     () =>
-      units.filter((u) => {
+      quarryUnits.filter((u) => {
         const c = classById.get(u.classId);
         return c && TRUCK_CATS.includes(c.category);
       }),
-    [units, classById]
+    [quarryUnits, classById]
   );
   const assignedFrontByUnit = useMemo(() => {
     const map = new Map<string, string>();
@@ -85,14 +90,14 @@ export default function QuarryPage() {
   }, [config.fronts]);
   const unassignedTrucks = truckUnits.filter((u) => !assignedFrontByUnit.has(u.id));
 
-  // Loaders from My Fleet
+  // Loaders from this quarry's fleet
   const loaderUnits = useMemo(
     () =>
-      units.filter((u) => {
+      quarryUnits.filter((u) => {
         const c = classById.get(u.classId);
         return c && LOADER_CATS.includes(c.category);
       }),
-    [units, classById]
+    [quarryUnits, classById]
   );
   const assignedLoaderFrontByUnit = useMemo(() => {
     const map = new Map<string, string>();
@@ -105,7 +110,7 @@ export default function QuarryPage() {
     <div>
       <PageHeader
         title="Quarry Performance"
-        subtitle="Multi-front load–haul–crush model for the daily ops meeting: see every front's bottleneck and what's costing you efficiency right now."
+        subtitle={`${active.name} · ${active.region} — multi-front load–haul–crush model for the daily ops meeting. Switch quarry from the top bar.`}
         actions={
           <button onClick={q.reset} className="text-xs text-inkfaint underline-offset-2 hover:text-ink hover:underline">
             Reset assumptions
@@ -133,7 +138,7 @@ export default function QuarryPage() {
         />
       </div>
 
-      {tab === "actuals" && <QuarryActuals model={r} config={config} />}
+      {tab === "actuals" && <QuarryActuals model={r} config={config} quarryId={q.activeQuarryId} />}
 
       {tab === "model" && (
         <>

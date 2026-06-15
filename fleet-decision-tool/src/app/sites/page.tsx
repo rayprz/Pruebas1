@@ -11,6 +11,7 @@ import {
 import { useParams } from "@/lib/store";
 import { useCatalog } from "@/lib/catalogStore";
 import { useFleet } from "@/lib/fleetStore";
+import { useQuarry } from "@/lib/quarryStore";
 import type { Category } from "@/lib/types";
 import { ModuleIntro } from "@/components/ModuleIntro";
 import { InfoTip } from "@/components/InfoTip";
@@ -33,7 +34,8 @@ const refModel = (classId: string) =>
 export default function SitesPage() {
   const { params } = useParams();
   const { classes, classById } = useCatalog();
-  const { sites, units, updateSite } = useFleet();
+  const { units } = useFleet();
+  const { quarries, updateQuarry } = useQuarry();
   const [annualHoursPerUnit, setAnnualHoursPerUnit] = useState(5000);
   const [trucksPerLoader, setTrucksPerLoader] = useState(3);
 
@@ -48,7 +50,7 @@ export default function SitesPage() {
   const modelById = useMemo(() => new Map(MODELS.map((m) => [m.id, m])), []);
 
   const analysis = useMemo(() => {
-    return sites.map((site) => {
+    return quarries.map((site) => {
       const truckCls = classById.get(site.truckClassId)!;
       const loaderCls = classById.get(site.loaderClassId)!;
       const sizing = sizeSite(site, truckCls, annualHoursPerUnit, trucksPerLoader);
@@ -63,8 +65,8 @@ export default function SitesPage() {
       const optimalOpex =
         sizing.trucksNeeded * truckOpUnit + sizing.loadersNeeded * loaderOpUnit;
 
-      // Current fleet assigned to this site
-      const siteUnits = units.filter((u) => u.site === site.name);
+      // Current fleet assigned to this quarry
+      const siteUnits = units.filter((u) => u.quarryId === site.id);
       const currentTrucks = siteUnits.filter((u) => {
         const c = classById.get(u.classId);
         return c && TRUCK_CATS.includes(c.category);
@@ -89,15 +91,15 @@ export default function SitesPage() {
         currentLoaders,
       };
     });
-  }, [sites, units, classById, modelById, params, annualHoursPerUnit, trucksPerLoader]);
+  }, [quarries, units, classById, modelById, params, annualHoursPerUnit, trucksPerLoader]);
 
   const totals = useMemo(() => {
-    const production = sites.reduce((s, x) => s + x.productionTons, 0);
+    const production = quarries.reduce((s, x) => s + x.productionTons, 0);
     const excess = analysis.reduce((s, a) => s + a.excess, 0);
     const recTrucks = analysis.reduce((s, a) => s + a.sizing.trucksNeeded, 0);
     const recLoaders = analysis.reduce((s, a) => s + a.sizing.loadersNeeded, 0);
     return { production, excess, recTrucks, recLoaders };
-  }, [sites, analysis]);
+  }, [quarries, analysis]);
 
   return (
     <div>
@@ -110,8 +112,8 @@ export default function SitesPage() {
         id="sites"
         purpose="Sizes the fleet each work area needs to hit its production target, and exposes the OPEX you waste running a non-optimal fleet."
         edit="Per site: production tons/yr, haul distance, and the loader/truck classes. Plus the global hrs/yr and trucks-per-loader assumptions."
-        output="Recommended trucks & loaders vs. what you actually assign, and the resulting 'excess OPEX' per site and overall."
-        connects="Reads assigned units from My Fleet (match by site name) and costs from Catalog. Rename a site to match unit 'site' values."
+        output="Recommended trucks & loaders vs. what you actually assign, and the resulting 'excess OPEX' per quarry and overall."
+        connects="One row per quarry. Reads the units assigned to each quarry in My Fleet and costs from Catalog."
         formulas={[
           { label: "Truck cycle (min)", expr: "fixed + 2 × haul km ÷ speed × 60" },
           { label: "Tons/truck/yr", expr: "payload × (60÷cycle) × 82% avail × 83% eff × hrs/yr" },
@@ -144,14 +146,14 @@ export default function SitesPage() {
           <Card key={site.id} className="p-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <SectionTitle>{site.name}</SectionTitle>
+                <SectionTitle>{site.name} <span className="text-sm font-sans not-italic text-inkfaint">· {site.region}</span></SectionTitle>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
                   <label className="flex items-center gap-1.5 text-inksoft">
                     Production
                     <input
                       type="number"
                       value={site.productionTons}
-                      onChange={(e) => updateSite(site.id, { productionTons: Number(e.target.value) })}
+                      onChange={(e) => updateQuarry(site.id, { productionTons: Number(e.target.value) })}
                       className="w-28 rounded-md border border-line bg-card px-1.5 py-0.5 text-right tabular text-ink focus:border-accent focus:outline-none"
                     />
                     <span className="text-inkfaint">t/yr</span>
@@ -162,7 +164,7 @@ export default function SitesPage() {
                       type="number"
                       step={0.1}
                       value={site.haulKm}
-                      onChange={(e) => updateSite(site.id, { haulKm: Number(e.target.value) })}
+                      onChange={(e) => updateQuarry(site.id, { haulKm: Number(e.target.value) })}
                       className="w-16 rounded-md border border-line bg-card px-1.5 py-0.5 text-right tabular text-ink focus:border-accent focus:outline-none"
                     />
                     <span className="text-inkfaint">km</span>
@@ -183,7 +185,7 @@ export default function SitesPage() {
                 <p className="text-[11px] uppercase tracking-[0.1em] text-inkfaint">Loading</p>
                 <Select
                   value={site.loaderClassId}
-                  onChange={(v) => updateSite(site.id, { loaderClassId: v })}
+                  onChange={(v) => updateQuarry(site.id, { loaderClassId: v })}
                   options={loaderOptions}
                   className="w-full"
                 />
@@ -194,7 +196,7 @@ export default function SitesPage() {
                 <p className="text-[11px] uppercase tracking-[0.1em] text-inkfaint">Hauling</p>
                 <Select
                   value={site.truckClassId}
-                  onChange={(v) => updateSite(site.id, { truckClassId: v })}
+                  onChange={(v) => updateQuarry(site.id, { truckClassId: v })}
                   options={truckOptions}
                   className="w-full"
                 />
