@@ -12,8 +12,12 @@ import { useParams } from "@/lib/store";
 import { useCatalog } from "@/lib/catalogStore";
 import { useFleet } from "@/lib/fleetStore";
 import { useQuarry } from "@/lib/quarryStore";
-import type { Category } from "@/lib/types";
+import { useFleetHistory } from "@/lib/fleetHistoryStore";
+import { usePeriod, monthsInPeriod } from "@/lib/periodStore";
+import { unitAt } from "@/lib/history";
+import type { Category, FleetMonth } from "@/lib/types";
 import { ModuleIntro } from "@/components/ModuleIntro";
+import { MiniTrend } from "@/components/MiniTrend";
 import { InfoTip } from "@/components/InfoTip";
 import {
   Card,
@@ -36,6 +40,8 @@ export default function SitesPage() {
   const { classes, classById } = useCatalog();
   const { units } = useFleet();
   const { quarries, updateQuarry } = useQuarry();
+  const { months: fleetMonths } = useFleetHistory();
+  const { period } = usePeriod();
   const [annualHoursPerUnit, setAnnualHoursPerUnit] = useState(5000);
   const [trucksPerLoader, setTrucksPerLoader] = useState(3);
 
@@ -101,6 +107,23 @@ export default function SitesPage() {
     return { production, excess, recTrucks, recLoaders };
   }, [quarries, analysis]);
 
+  // Optimal OPEX is constant across the window; current OPEX rises as the
+  // assigned fleet ages, so excess OPEX moves with the fleet's meter history.
+  const optimalTotal = useMemo(() => analysis.reduce((s, a) => s + a.optimalOpex, 0), [analysis]);
+  const excessTrend = useMemo(() => {
+    const months = monthsInPeriod([...new Set(fleetMonths.map((m) => m.month))], period);
+    const fmByKey = new Map<string, FleetMonth>(fleetMonths.map((m) => [`${m.unitId}|${m.month}`, m]));
+    return months.map((month) => {
+      const current = units.reduce((s, u) => {
+        const c = classById.get(u.classId);
+        if (!c) return s;
+        const m = modelById.get(u.modelId) ?? refModel(u.classId);
+        return s + unitAnnualCost(c, m, "medium", unitAt(u, fmByKey, month), params).operating;
+      }, 0);
+      return { month, value: Math.max(0, current - optimalTotal) };
+    });
+  }, [fleetMonths, period, units, classById, modelById, params, optimalTotal]);
+
   return (
     <div>
       <PageHeader
@@ -139,6 +162,10 @@ export default function SitesPage() {
             <NumberField label="Trucks / loader" value={trucksPerLoader} onChange={setTrucksPerLoader} />
           </div>
         </Card>
+      </div>
+
+      <div className="mb-5 grid grid-cols-1 sm:max-w-sm">
+        <MiniTrend label="Excess OPEX / yr" data={excessTrend} fmt={usdCompact} color="#b06a3c" goodWhenUp={false} />
       </div>
 
       <div className="space-y-4">

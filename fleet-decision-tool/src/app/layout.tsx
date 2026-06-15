@@ -7,6 +7,8 @@ import { FleetProvider } from "@/lib/fleetStore";
 import { QuarryProvider } from "@/lib/quarryStore";
 import { ShiftProvider } from "@/lib/shiftStore";
 import { MaintProvider } from "@/lib/maintStore";
+import { FleetHistoryProvider } from "@/lib/fleetHistoryStore";
+import { PeriodProvider } from "@/lib/periodStore";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
 
@@ -40,6 +42,8 @@ export default function RootLayout({
           <QuarryProvider>
           <ShiftProvider>
           <MaintProvider>
+          <FleetHistoryProvider>
+          <PeriodProvider>
             <div className="flex min-h-screen">
               <Sidebar />
               <div className="flex min-w-0 flex-1 flex-col">
@@ -49,6 +53,8 @@ export default function RootLayout({
                 </main>
               </div>
             </div>
+          </PeriodProvider>
+          </FleetHistoryProvider>
           </MaintProvider>
           </ShiftProvider>
           </QuarryProvider>

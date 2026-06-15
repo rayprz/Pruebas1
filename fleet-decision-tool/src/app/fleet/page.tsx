@@ -15,10 +15,14 @@ import { useFleet } from "@/lib/fleetStore";
 import { useQuarry } from "@/lib/quarryStore";
 import { useMaint } from "@/lib/maintStore";
 import { actualMaintPerHrByUnit } from "@/lib/maintLog";
+import { useFleetHistory } from "@/lib/fleetHistoryStore";
+import { usePeriod, monthsInPeriod } from "@/lib/periodStore";
+import { unitAt } from "@/lib/history";
 import { csvToUnits, downloadCsv, unitsToCsv } from "@/lib/csv";
 import { downloadTemplate, fileToCsv } from "@/lib/xlsx";
-import type { FleetUnit, Scenario } from "@/lib/types";
+import type { FleetMonth, FleetUnit, Scenario } from "@/lib/types";
 import { BrandBadge } from "@/components/BrandBadge";
+import { MiniTrend } from "@/components/MiniTrend";
 import { IconPlus, IconTrash } from "@/components/Icons";
 import { ModuleIntro } from "@/components/ModuleIntro";
 import { InfoTip } from "@/components/InfoTip";
@@ -52,6 +56,8 @@ export default function FleetPage() {
   const { units, addUnit, updateUnit, removeUnit, replaceUnits, resetAll } = useFleet();
   const { quarries } = useQuarry();
   const { records: maintRecords } = useMaint();
+  const { months: fleetMonths } = useFleetHistory();
+  const { period } = usePeriod();
   const [scenario, setScenario] = useState<Scenario>("medium");
   const [quarryFilter, setQuarryFilter] = useState<string>("all");
   const [adding, setAdding] = useState(false);
@@ -103,6 +109,21 @@ export default function FleetPage() {
     const nearEol = rows.filter((r) => r.lifePct >= 0.8).length;
     return { operating, owning, total: operating + owning, active, nearEol };
   }, [rows, visibleUnits]);
+
+  const opexTrend = useMemo(() => {
+    const months = monthsInPeriod([...new Set(fleetMonths.map((m) => m.month))], period);
+    const fmByKey = new Map<string, FleetMonth>(fleetMonths.map((m) => [`${m.unitId}|${m.month}`, m]));
+    return months.map((month) => {
+      const value = visibleUnits.reduce((s, u) => {
+        const cls = classById.get(u.classId);
+        if (!cls) return s;
+        const model = modelById.get(u.modelId) ?? MODELS.find((m) => m.classId === u.classId)!;
+        const hu = unitAt(u, fmByKey, month);
+        return s + unitAnnualCost(cls, model, scenario, hu, params, maintOverride?.get(u.id)).operating;
+      }, 0);
+      return { month, value };
+    });
+  }, [fleetMonths, period, visibleUnits, classById, modelById, scenario, params, maintOverride]);
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -164,6 +185,10 @@ export default function FleetPage() {
         <StatCard label="Fleet OPEX / yr" value={usdCompact(totals.operating)} sub="fuel + maint + operator" tone="accent" />
         <StatCard label="Owning / yr" value={usdCompact(totals.owning)} sub="deprec. + capital + insurance" />
         <StatCard label="Near end-of-life" value={totals.nearEol} sub="≥ 80% of life hours" tone={totals.nearEol > 0 ? "danger" : "olive"} />
+      </div>
+
+      <div className="mb-5 grid grid-cols-1 sm:max-w-sm">
+        <MiniTrend label="Fleet OPEX / yr" data={opexTrend} fmt={usdCompact} color="#b06a3c" goodWhenUp={false} />
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">

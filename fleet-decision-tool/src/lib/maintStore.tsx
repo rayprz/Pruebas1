@@ -50,7 +50,7 @@ const rec = (
   })),
 });
 
-const MONTHS = ["2026-01", "2026-02", "2026-03", "2026-04"];
+const MONTHS = ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06"];
 
 const SEED: MaintRecord[] = [
   // HT-01 — old Cat 777 (Tepeaca): high, engine-heavy corrective
@@ -78,6 +78,17 @@ const SEED: MaintRecord[] = [
   rec("m-mht01-2", "m-ht1", MONTHS[1], 345, [["Engine", "preventive", 3800, 16], ["Transmission", "corrective", 9600, 40], ["Tires", "preventive", 4200]]),
   rec("m-mht01-3", "m-ht1", MONTHS[2], 355, [["Engine", "corrective", 13200, 58], ["Undercarriage", "preventive", 3600]]),
   rec("m-mht01-4", "m-ht1", MONTHS[3], 348, [["Engine", "preventive", 4000, 16], ["Brakes", "corrective", 5200, 22], ["Tires", "preventive", 4100]]),
+  // May & June — costs creep up with hours
+  rec("m-ht01-5", "ht01", MONTHS[4], 418, [["Engine", "corrective", 15500, 68], ["Tires", "preventive", 4200]]),
+  rec("m-ht01-6", "ht01", MONTHS[5], 425, [["Engine", "preventive", 5800, 22], ["Final Drives", "corrective", 11000, 44], ["Tires", "preventive", 8500]]),
+  rec("m-ht04-5", "ht04", MONTHS[4], 420, [["Engine", "preventive", 4900, 18], ["Tires", "preventive", 6700]]),
+  rec("m-ht04-6", "ht04", MONTHS[5], 424, [["Engine", "preventive", 4800, 18], ["Hydraulics", "preventive", 2700, 10]]),
+  rec("m-ht06-5", "ht06", MONTHS[4], 380, [["Engine", "preventive", 3600, 14], ["Brakes", "preventive", 2000]]),
+  rec("m-ht06-6", "ht06", MONTHS[5], 382, [["Engine", "preventive", 3500, 14], ["Tires", "preventive", 5000]]),
+  rec("m-ld01-5", "ld01", MONTHS[4], 376, [["Hydraulics", "preventive", 9000, 30], ["Tires", "preventive", 7200]]),
+  rec("m-ld01-6", "ld01", MONTHS[5], 374, [["Final Drives", "preventive", 6900, 24], ["Engine", "preventive", 5600, 20]]),
+  rec("m-mht01-5", "m-ht1", MONTHS[4], 352, [["Engine", "corrective", 12500, 54], ["Undercarriage", "preventive", 3500]]),
+  rec("m-mht01-6", "m-ht1", MONTHS[5], 350, [["Engine", "corrective", 14000, 60], ["Brakes", "corrective", 5000, 22], ["Tires", "preventive", 4000]]),
 ];
 
 interface MaintStore {
