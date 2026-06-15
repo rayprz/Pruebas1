@@ -60,7 +60,8 @@ export function quarryMetrics(
   allRecords: ShiftRecord[],
   classById: Map<string, EquivalenceClass>,
   params: GlobalParams,
-  maintByUnit?: Map<string, number>
+  maintByUnit?: Map<string, number>,
+  availByUnit?: Map<string, number>
 ): QuarryMetrics {
   const units = allUnits.filter((u) => u.quarryId === quarry.id);
   const unitsById = new Map(units.map((u) => [u.id, u]));
@@ -109,7 +110,7 @@ export function quarryMetrics(
     excess = current - optimal;
   }
 
-  const r = computeQuarry(quarry.config, classById, params, unitsById, maintByUnit);
+  const r = computeQuarry(quarry.config, classById, params, unitsById, maintByUnit, availByUnit);
   const modelByFront = new Map(r.fronts.map((f) => [f.name, f.delivered]));
   const records = allRecords.filter((rec) => rec.quarryId === quarry.id);
   const s = summarize(records, modelByFront, quarry.config.targetTph);

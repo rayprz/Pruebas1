@@ -127,6 +127,14 @@ export function actualMaintPerHrByUnit(records: MaintRecord[]): Map<string, numb
   return m;
 }
 
+/** Reliability availability per unit (uptime ÷ uptime+downtime) — the override
+ *  feed for the Quarry model's "observed availability" switch. */
+export function actualAvailabilityByUnit(records: MaintRecord[]): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const [id, u] of unitMaint(records)) if (u.failures > 0) m.set(id, u.availability);
+  return m;
+}
+
 export interface MonthPoint {
   month: string;
   cost: number;

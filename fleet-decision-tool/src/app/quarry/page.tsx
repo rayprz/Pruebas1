@@ -19,7 +19,7 @@ import { useCatalog } from "@/lib/catalogStore";
 import { useFleet } from "@/lib/fleetStore";
 import { useQuarry } from "@/lib/quarryStore";
 import { useMaint } from "@/lib/maintStore";
-import { actualMaintPerHrByUnit } from "@/lib/maintLog";
+import { actualMaintPerHrByUnit, actualAvailabilityByUnit } from "@/lib/maintLog";
 import type { Category, FleetUnit, QuarryFront } from "@/lib/types";
 import { ModuleIntro } from "@/components/ModuleIntro";
 import { InfoTip } from "@/components/InfoTip";
@@ -74,10 +74,14 @@ export default function QuarryPage() {
     () => (params.useActualMaint ? actualMaintPerHrByUnit(maintRecords) : undefined),
     [params.useActualMaint, maintRecords]
   );
+  const availByUnit = useMemo(
+    () => (params.useActualAvailability ? actualAvailabilityByUnit(maintRecords) : undefined),
+    [params.useActualAvailability, maintRecords]
+  );
 
   const r = useMemo(
-    () => computeQuarry(config, classById, params, unitsById, maintByUnit),
-    [config, classById, params, unitsById, maintByUnit]
+    () => computeQuarry(config, classById, params, unitsById, maintByUnit, availByUnit),
+    [config, classById, params, unitsById, maintByUnit, availByUnit]
   );
 
   const loaderOptions = classes.filter((c) => LOADER_CATS.includes(c.category)).map((c) => ({ value: c.id, label: c.name }));

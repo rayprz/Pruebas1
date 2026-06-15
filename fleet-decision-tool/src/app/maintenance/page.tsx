@@ -3,8 +3,9 @@
 import { useMemo, useRef, useState } from "react";
 import { MODELS } from "@/data/catalog";
 import { usd, usdCompact } from "@/lib/engine";
-import { unitMaint, maintToCsv, csvToMaint } from "@/lib/maintLog";
+import { unitMaint, quarryMaint, maintToCsv, csvToMaint } from "@/lib/maintLog";
 import { downloadCsv } from "@/lib/csv";
+import { downloadTemplate, downloadSheets, fileToCsv } from "@/lib/xlsx";
 import { useParams } from "@/lib/store";
 import { useCatalog } from "@/lib/catalogStore";
 import { useFleet } from "@/lib/fleetStore";
@@ -37,9 +38,19 @@ const TYPE_STYLE: Record<MaintType, string> = {
   overhaul: "bg-accentsoft text-accentink",
 };
 
-const TEMPLATE = `unitNo,month,hours,subsystem,type,cost,laborHours,downtimeHours,note
-HT-01,2026-05,420,Engine,corrective,14000,60,20,
-HT-01,2026-05,420,Tires,preventive,8000,,,`;
+const TPL_HEADERS = ["unitNo", "month", "hours", "subsystem", "type", "cost", "laborHours", "downtimeHours", "note"];
+const TPL_SAMPLE = [
+  ["HT-01", "2026-05", 420, "Engine", "corrective", 14000, 60, 20, ""],
+  ["HT-01", "2026-05", 420, "Tires", "preventive", 8000, "", "", ""],
+];
+const TPL_NOTES = [
+  { column: "unitNo", note: "Unit number as it appears in My Fleet (e.g. HT-01)." },
+  { column: "month", note: "Month, YYYY-MM (e.g. 2026-05)." },
+  { column: "hours", note: "Operating hours the unit ran that month (drives $/hr)." },
+  { column: "subsystem", note: "Engine, Transmission, Hydraulics, Final Drives, Tires, Undercarriage, Brakes, Electrical, Structure, Cooling, Other." },
+  { column: "type", note: "preventive, corrective or overhaul." },
+  { column: "downtimeHours", note: "Machine downtime caused (mainly for corrective) — drives MTBF/availability." },
+];
 
 export default function MaintenancePage() {
   const { params } = useParams();
@@ -97,11 +108,41 @@ export default function MaintenancePage() {
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const text = await file.text();
+    const text = await fileToCsv(file);
     const { records: parsed, errors } = csvToMaint(text, unitIdByNo);
     if (parsed.length) replaceRecords(parsed);
     setImportMsg(parsed.length ? `Imported ${parsed.length} unit-months.${errors.length ? ` ${errors[0]}` : ""}` : `No rows imported. ${errors[0] ?? ""}`);
     if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const exportExcel = () => {
+    const um = unitMaint(records);
+    const qm = quarryMaint(
+      records,
+      new Map(units.map((u) => [u.id, u.quarryId])),
+      new Map(quarries.map((q) => [q.id, q.productionTons]))
+    );
+    const r2 = (n: number) => Number(n.toFixed(2));
+    const r1 = (n: number) => Number(n.toFixed(1));
+    const log: (string | number)[][] = [["unitNo", "month", "hours", "subsystem", "type", "cost", "laborHours", "downtimeHours"]];
+    for (const r of records) for (const l of r.lines) log.push([unitNoById.get(r.unitId) ?? r.unitId, r.month, r.hours, l.subsystem, l.type, l.cost, l.laborHours ?? "", l.downtimeHours ?? ""]);
+    const byUnit: (string | number)[][] = [["unitNo", "quarry", "model", "$/hr", "total $", "scheduled %", "MTBF (h)", "MTTR (h)", "availability %"]];
+    for (const [id, m] of um) {
+      const u = unitsById.get(id);
+      const mod = u ? modelById.get(u.modelId) : undefined;
+      byUnit.push([u?.unitNo ?? id, u ? quarryName.get(u.quarryId) ?? "" : "", mod ? `${mod.brand} ${mod.model}` : "", r2(m.perHour), Math.round(m.totalCost), Math.round(m.scheduledPct * 100), Number.isFinite(m.mtbf) ? Math.round(m.mtbf) : "", r1(m.mttr), r1(m.availability * 100)]);
+    }
+    const byQuarry: (string | number)[][] = [["quarry", "region", "annualized $", "$/ton", "availability %", "units"]];
+    for (const q of quarries) {
+      const m = qm.get(q.id);
+      if (!m) continue;
+      byQuarry.push([q.name, q.region, Math.round(m.annualizedCost), r2(m.perTon), r1(m.availability * 100), m.unitsWithData]);
+    }
+    downloadSheets("maintenance-report.xlsx", [
+      { name: "Log", rows: log },
+      { name: "By unit", rows: byUnit },
+      { name: "By quarry", rows: byQuarry },
+    ]);
   };
 
   return (
@@ -110,7 +151,11 @@ export default function MaintenancePage() {
         title="Maintenance"
         subtitle="Capture maintenance cost per unit per month by subsystem & type — and compare equivalent equipment over time and across quarries."
         actions={
-          tab === "log" ? <Button onClick={() => setAdding((a) => !a)}><IconPlus width={16} height={16} /> Add line</Button> : undefined
+          <div className="no-print flex flex-wrap items-center gap-2">
+            <Button variant="ghost" onClick={exportExcel}>Export Excel</Button>
+            <Button variant="ghost" onClick={() => window.print()}>Print / PDF</Button>
+            {tab === "log" && <Button onClick={() => setAdding((a) => !a)}><IconPlus width={16} height={16} /> Add line</Button>}
+          </div>
         }
       />
 
@@ -147,10 +192,10 @@ export default function MaintenancePage() {
             <Select value={fUnit} onChange={setFUnit} options={[{ value: "all", label: "All units" }, ...units.filter((u) => fQuarry === "all" || u.quarryId === fQuarry).map((u) => ({ value: u.id, label: u.unitNo }))]} />
             <Select value={fType} onChange={setFType} options={[{ value: "all", label: "All types" }, ...TYPE_OPTIONS]} />
             <span className="mx-1 h-5 w-px bg-line" />
-            <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={onFile} className="hidden" />
-            <Button variant="ghost" onClick={() => fileRef.current?.click()}>Import CSV</Button>
-            <Button variant="ghost" onClick={() => downloadCsv("maintenance.csv", maintToCsv(records, unitNoById))}>Export</Button>
-            <Button variant="ghost" onClick={() => downloadCsv("maintenance-template.csv", TEMPLATE)}>Template</Button>
+            <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,text/csv" onChange={onFile} className="hidden" />
+            <Button variant="ghost" onClick={() => fileRef.current?.click()}>Import</Button>
+            <Button variant="ghost" onClick={() => downloadCsv("maintenance.csv", maintToCsv(records, unitNoById))}>Export CSV</Button>
+            <Button variant="ghost" onClick={() => downloadTemplate("maintenance-template.xlsx", TPL_HEADERS, TPL_SAMPLE, TPL_NOTES)}>Excel template</Button>
             {importMsg && <span className="text-xs text-inksoft">{importMsg}</span>}
           </div>
 

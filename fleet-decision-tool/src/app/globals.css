@@ -56,3 +56,17 @@ body {
   scrollbar-width: thin;
   scrollbar-color: var(--color-line-strong) transparent;
 }
+
+/* Clean print / Save-as-PDF: drop the app chrome, keep the report */
+@media print {
+  aside,
+  header {
+    display: none !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+}

@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { csvToShifts, shiftsToCsv, summarize } from "@/lib/shiftLog";
 import { downloadCsv } from "@/lib/csv";
+import { downloadTemplate, fileToCsv } from "@/lib/xlsx";
 import { useShiftLog } from "@/lib/shiftStore";
 import type { QuarryConfig } from "@/lib/types";
 import type { QuarryResult } from "@/lib/quarry";
@@ -36,10 +37,19 @@ const pct = (n: number) => `${(n * 100).toFixed(0)}%`;
 const kt = (n: number) => `${(n / 1000).toFixed(1)}k`;
 const FRONT_COLORS = ["#b06a3c", "#6f7548", "#5b7c8a", "#c08a44", "#b07a8c", "#8a8c5a"];
 
-const TEMPLATE = `date,shift,scheduledHours,front,tons,downtimeHours,downtimeReason,note
-2026-06-08,A,10,North Limestone,9500,1,Waiting on trucks,
-2026-06-08,A,10,South Limestone,6800,1.2,Blast clearance,
-2026-06-08,B,10,North Limestone,8200,2.5,Crusher liner change,`;
+const TPL_HEADERS = ["date", "shift", "scheduledHours", "front", "tons", "downtimeHours", "downtimeReason", "note"];
+const TPL_SAMPLE = [
+  ["2026-06-08", "A", 10, "North Limestone", 9500, 1, "Waiting on trucks", ""],
+  ["2026-06-08", "A", 10, "South Limestone", 6800, 1.2, "Blast clearance", ""],
+  ["2026-06-08", "B", 10, "North Limestone", 8200, 2.5, "Crusher liner change", ""],
+];
+const TPL_NOTES = [
+  { column: "date", note: "Shift date, YYYY-MM-DD." },
+  { column: "shift", note: "Shift label, e.g. A / B / Night." },
+  { column: "front", note: "Front name — should match a front of this quarry (see the Daily model tab)." },
+  { column: "tons", note: "Saleable tons that front produced in the shift." },
+  { column: "downtimeReason", note: "Free text; grouped in the downtime Pareto." },
+];
 
 export function QuarryActuals({
   model,
@@ -93,7 +103,7 @@ export function QuarryActuals({
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const text = await file.text();
+    const text = await fileToCsv(file);
     const { records: parsed, errors } = csvToShifts(text, quarryId);
     if (parsed.length) replaceRecords([...allRecords.filter((r) => r.quarryId !== quarryId), ...parsed]);
     setImportMsg(
@@ -244,10 +254,10 @@ export function QuarryActuals({
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <SectionTitle>Shift log</SectionTitle>
         <div className="flex flex-wrap items-center gap-2">
-          <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={onFile} className="hidden" />
-          <Button variant="ghost" onClick={() => fileRef.current?.click()}>Import CSV</Button>
+          <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,text/csv" onChange={onFile} className="hidden" />
+          <Button variant="ghost" onClick={() => fileRef.current?.click()}>Import</Button>
           <Button variant="ghost" onClick={() => downloadCsv("shift-log.csv", shiftsToCsv(records))}>Export</Button>
-          <Button variant="ghost" onClick={() => downloadCsv("shift-template.csv", TEMPLATE)}>Template</Button>
+          <Button variant="ghost" onClick={() => downloadTemplate("shift-template.xlsx", TPL_HEADERS, TPL_SAMPLE, TPL_NOTES)}>Excel template</Button>
           <Button onClick={() => setAdding((a) => !a)}><IconPlus width={16} height={16} /> Add entry</Button>
         </div>
       </div>

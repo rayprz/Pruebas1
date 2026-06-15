@@ -82,6 +82,23 @@ export function ParamsPanel() {
           “Actual” uses logged maintenance $/hr (from the Maintenance module)
           where available, across Fleet, Quarry and the Dashboard.
         </p>
+        <p className="pt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-inkfaint">
+          Availability source
+        </p>
+        <Segmented
+          value={params.useActualAvailability ? "observed" : "assumed"}
+          onChange={(v) => update({ useActualAvailability: v === "observed" })}
+          options={[
+            { value: "assumed", label: "Assumed" },
+            { value: "observed", label: "Observed" },
+          ]}
+          size="sm"
+        />
+        <p className="text-xs text-inkfaint">
+          “Observed” feeds each unit’s maintenance-derived availability (from
+          corrective downtime) into the Quarry model, so bottlenecks reflect
+          real reliability.
+        </p>
       </div>
 
       <div className="border-t border-line pt-3">

@@ -13,7 +13,7 @@ import {
 } from "recharts";
 import { usd, usdCompact } from "@/lib/engine";
 import { quarryMetrics, type QuarryMetrics } from "@/lib/rollup";
-import { actualMaintPerHrByUnit } from "@/lib/maintLog";
+import { actualMaintPerHrByUnit, actualAvailabilityByUnit } from "@/lib/maintLog";
 import { useParams } from "@/lib/store";
 import { useCatalog } from "@/lib/catalogStore";
 import { useFleet } from "@/lib/fleetStore";
@@ -41,10 +41,14 @@ export default function CompareQuarriesPage() {
     () => (params.useActualMaint ? actualMaintPerHrByUnit(maintRecords) : undefined),
     [params.useActualMaint, maintRecords]
   );
+  const availByUnit = useMemo(
+    () => (params.useActualAvailability ? actualAvailabilityByUnit(maintRecords) : undefined),
+    [params.useActualAvailability, maintRecords]
+  );
 
   const metrics = useMemo(
-    () => quarries.map((q) => quarryMetrics(q, units, records, classById, params, maintByUnit)),
-    [quarries, units, records, classById, params, maintByUnit]
+    () => quarries.map((q) => quarryMetrics(q, units, records, classById, params, maintByUnit, availByUnit)),
+    [quarries, units, records, classById, params, maintByUnit, availByUnit]
   );
 
   const sorted = useMemo(() => {

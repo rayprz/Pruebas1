@@ -16,6 +16,7 @@ import { useQuarry } from "@/lib/quarryStore";
 import { useMaint } from "@/lib/maintStore";
 import { actualMaintPerHrByUnit } from "@/lib/maintLog";
 import { csvToUnits, downloadCsv, unitsToCsv } from "@/lib/csv";
+import { downloadTemplate, fileToCsv } from "@/lib/xlsx";
 import type { FleetUnit, Scenario } from "@/lib/types";
 import { BrandBadge } from "@/components/BrandBadge";
 import { IconPlus, IconTrash } from "@/components/Icons";
@@ -32,9 +33,18 @@ import {
   TextInput,
 } from "@/components/ui";
 
-const TEMPLATE = `unitNo,classId,modelId,year,currentHours,annualHours,availability,quarryId,status
-HT-101,ht-777,cat-777g,2019,28000,5000,0.85,q-tepeaca,active
-LD-201,pl-992,km-wa800,2021,16000,4500,0.9,q-tepeaca,active`;
+const TPL_HEADERS = ["unitNo", "classId", "modelId", "year", "currentHours", "annualHours", "availability", "quarryId", "status"];
+const TPL_SAMPLE = [
+  ["HT-101", "ht-777", "cat-777g", 2019, 28000, 5000, 0.85, "q-tepeaca", "active"],
+  ["LD-201", "pl-992", "km-wa800", 2021, 16000, 4500, 0.9, "q-tepeaca", "active"],
+];
+const TPL_NOTES = [
+  { column: "classId", note: "Size class id — see the Catalog module (e.g. ht-777, ht-773, pl-992, wl-980)." },
+  { column: "modelId", note: "Brand/model id — see Catalog (e.g. cat-777g, km-hd785, vo-a40)." },
+  { column: "availability", note: "Mechanical availability, 0 to 1 (e.g. 0.85)." },
+  { column: "quarryId", note: "Quarry id — see Manage Quarries (e.g. q-tepeaca, q-atotonilco, q-monterrey)." },
+  { column: "status", note: "active, standby or down." },
+];
 
 export default function FleetPage() {
   const { params } = useParams();
@@ -97,7 +107,7 @@ export default function FleetPage() {
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const text = await file.text();
+    const text = await fileToCsv(file);
     const { units: parsed, errors } = csvToUnits(text);
     if (parsed.length) replaceUnits(parsed);
     const unknown = parsed.filter((u) => !classById.get(u.classId)).length;
@@ -164,10 +174,10 @@ export default function FleetPage() {
           options={[{ value: "all", label: "All quarries" }, ...quarryOptions]}
         />
         <span className="mx-1 h-5 w-px bg-line" />
-        <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={onFile} className="hidden" />
-        <Button variant="ghost" onClick={() => fileRef.current?.click()}>Import CSV</Button>
+        <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,text/csv" onChange={onFile} className="hidden" />
+        <Button variant="ghost" onClick={() => fileRef.current?.click()}>Import</Button>
         <Button variant="ghost" onClick={() => downloadCsv("my-fleet.csv", unitsToCsv(visibleUnits))}>Export CSV</Button>
-        <Button variant="ghost" onClick={() => downloadCsv("fleet-template.csv", TEMPLATE)}>Download template</Button>
+        <Button variant="ghost" onClick={() => downloadTemplate("fleet-template.xlsx", TPL_HEADERS, TPL_SAMPLE, TPL_NOTES)}>Excel template</Button>
         {importMsg && <span className="text-xs text-inksoft">{importMsg}</span>}
       </div>
 

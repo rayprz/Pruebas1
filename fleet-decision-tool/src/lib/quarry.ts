@@ -152,14 +152,16 @@ function classFuel(classId: string, classById: Map<string, EquivalenceClass>): n
 function computeFront(
   front: QuarryFront,
   classById: Map<string, EquivalenceClass>,
-  unitsById: Map<string, FleetUnit>
+  unitsById: Map<string, FleetUnit>,
+  availByUnit?: Map<string, number>
 ): FrontResult {
+  const unitAvail = (u: FleetUnit) => availByUnit?.get(u.id) ?? u.availability;
   const bucketEff = front.loaderBucketTons * front.bucketFillFactor;
   const loaderUnit = front.loaderUnitId ? unitsById.get(front.loaderUnitId) : undefined;
   const loaderActive = loaderUnit ? loaderUnit.status === "active" : true;
   const loaderAvail = loaderUnit
     ? loaderActive
-      ? loaderUnit.availability
+      ? unitAvail(loaderUnit)
       : 0
     : front.loaderAvailability;
   const loaderLabel = loaderUnit
@@ -186,7 +188,7 @@ function computeFront(
       const cycleSec = front.spotDumpSec + loadTimeSec + haulLoadedSec + returnSec;
       const active = u.status === "active";
       const tphPerTruck =
-        active && cycleSec > 0 ? payload * (3600 / cycleSec) * u.availability : 0;
+        active && cycleSec > 0 ? payload * (3600 / cycleSec) * unitAvail(u) : 0;
       return {
         unitId: u.id,
         unitNo: u.unitNo,
@@ -254,13 +256,14 @@ export function computeQuarry(
   classById: Map<string, EquivalenceClass>,
   params: GlobalParams,
   unitsById: Map<string, FleetUnit>,
-  maintByUnit?: Map<string, number>
+  maintByUnit?: Map<string, number>,
+  availByUnit?: Map<string, number>
 ): QuarryResult {
   const scheduledHoursYear = cfg.shiftsPerDay * cfg.hoursPerShift * cfg.daysPerYear;
   const productiveHoursYear = scheduledHoursYear * cfg.operatingEfficiency;
   const shiftHours = cfg.hoursPerShift;
 
-  const fronts = cfg.fronts.map((f) => computeFront(f, classById, unitsById));
+  const fronts = cfg.fronts.map((f) => computeFront(f, classById, unitsById, availByUnit));
 
   const crusherCapacityTph = cfg.crusherRatedTph * cfg.crusherAvailability;
   const crusherFronts = fronts.filter((f) => f.destination === "crusher");

@@ -264,6 +264,10 @@ export interface GlobalParams {
   /** When true, use logged actual maintenance $/hr (where available) instead of
    *  the modeled class baseline, across Fleet / Quarry / Dashboard. */
   useActualMaint: boolean;
+  /** When true, the Quarry model uses each unit's maintenance-derived
+   *  reliability availability (from corrective downtime) instead of the
+   *  assumed availability field. */
+  useActualAvailability: boolean;
 }
 
 export interface CostBreakdown {
