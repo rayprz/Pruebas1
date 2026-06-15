@@ -9,8 +9,9 @@ import {
   type ReactNode,
 } from "react";
 import type { MaintLine, MaintRecord, MaintType } from "./types";
+import { HISTORY_MONTHS } from "./periodStore";
 
-const KEY = "fleet-tool-maint-v1";
+const KEY = "fleet-tool-maint-v2";
 
 export const SUBSYSTEMS = [
   "Engine",
@@ -50,46 +51,60 @@ const rec = (
   })),
 });
 
-const MONTHS = ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06"];
+// Per-unit maintenance profiles. Targets a realistic $/hr so the benchmark
+// story holds: old units (HT-01, MHT-01) run well above the modeled baseline;
+// the new Komatsu (HT-04) below it. Data is generated for every month in the
+// canonical 12-month timeline, deterministically (no Math.random) so SSR/CSR
+// hydration matches.
+interface MaintProfile {
+  unitId: string;
+  hours: number; // monthly operating hours
+  perHr: number; // target maintenance $/hr
+  sched: number; // preventive share of cost
+  events: number; // # corrective events across the window
+  corr: [subsystem: string, laborPerK: number][]; // corrective pool (labor hrs per $1k)
+}
 
-const SEED: MaintRecord[] = [
-  // HT-01 — old Cat 777 (Tepeaca): high, engine-heavy corrective
-  rec("m-ht01-1", "ht01", MONTHS[0], 420, [["Engine", "corrective", 14200, 60], ["Tires", "preventive", 8600], ["Hydraulics", "preventive", 4200, 18]]),
-  rec("m-ht01-2", "ht01", MONTHS[1], 415, [["Engine", "preventive", 5200, 20], ["Tires", "preventive", 4100], ["Final Drives", "corrective", 12800, 48]]),
-  rec("m-ht01-3", "ht01", MONTHS[2], 430, [["Engine", "corrective", 16800, 72], ["Brakes", "corrective", 5400, 22], ["Tires", "preventive", 4300]]),
-  rec("m-ht01-4", "ht01", MONTHS[3], 410, [["Engine", "preventive", 5600, 22], ["Hydraulics", "corrective", 9200, 36], ["Tires", "preventive", 8800]]),
-  // HT-04 — new Komatsu HD785 (Tepeaca): lower, preventive-heavy
-  rec("m-ht04-1", "ht04", MONTHS[0], 420, [["Engine", "preventive", 4800, 18], ["Tires", "preventive", 6800], ["Electrical", "corrective", 1900, 8]]),
-  rec("m-ht04-2", "ht04", MONTHS[1], 425, [["Engine", "preventive", 4600, 18], ["Tires", "preventive", 3200], ["Hydraulics", "preventive", 2600, 10]]),
-  rec("m-ht04-3", "ht04", MONTHS[2], 418, [["Engine", "preventive", 4900, 18], ["Brakes", "preventive", 2100], ["Tires", "preventive", 6600]]),
-  rec("m-ht04-4", "ht04", MONTHS[3], 422, [["Engine", "preventive", 4700, 18], ["Cooling", "corrective", 3100, 12], ["Tires", "preventive", 3000]]),
-  // HT-06 — Cat 773 (Tepeaca)
-  rec("m-ht06-1", "ht06", MONTHS[0], 380, [["Engine", "preventive", 3600, 14], ["Brakes", "corrective", 4200, 16]]),
-  rec("m-ht06-2", "ht06", MONTHS[1], 375, [["Engine", "preventive", 3400, 14], ["Tires", "preventive", 5200]]),
-  rec("m-ht06-3", "ht06", MONTHS[2], 385, [["Transmission", "corrective", 7800, 30], ["Engine", "preventive", 3500, 14]]),
-  rec("m-ht06-4", "ht06", MONTHS[3], 378, [["Engine", "preventive", 3600, 14], ["Hydraulics", "preventive", 2400, 10]]),
-  // LD-01 — Cat 992 loader (Tepeaca): big iron
-  rec("m-ld01-1", "ld01", MONTHS[0], 375, [["Hydraulics", "preventive", 9200, 30], ["Final Drives", "preventive", 6800, 24], ["Tires", "preventive", 7400]]),
-  rec("m-ld01-2", "ld01", MONTHS[1], 370, [["Hydraulics", "corrective", 13400, 52], ["Engine", "preventive", 5600, 20]]),
-  rec("m-ld01-3", "ld01", MONTHS[2], 380, [["Final Drives", "corrective", 11200, 44], ["Tires", "preventive", 7600], ["Engine", "preventive", 5500, 20]]),
-  rec("m-ld01-4", "ld01", MONTHS[3], 372, [["Hydraulics", "preventive", 8800, 30], ["Tires", "preventive", 3800]]),
-  // MHT-01 — old Cat 773 (Monterrey): high, engine + undercarriage
-  rec("m-mht01-1", "m-ht1", MONTHS[0], 350, [["Engine", "corrective", 11800, 52], ["Undercarriage", "corrective", 6400, 26]]),
-  rec("m-mht01-2", "m-ht1", MONTHS[1], 345, [["Engine", "preventive", 3800, 16], ["Transmission", "corrective", 9600, 40], ["Tires", "preventive", 4200]]),
-  rec("m-mht01-3", "m-ht1", MONTHS[2], 355, [["Engine", "corrective", 13200, 58], ["Undercarriage", "preventive", 3600]]),
-  rec("m-mht01-4", "m-ht1", MONTHS[3], 348, [["Engine", "preventive", 4000, 16], ["Brakes", "corrective", 5200, 22], ["Tires", "preventive", 4100]]),
-  // May & June — costs creep up with hours
-  rec("m-ht01-5", "ht01", MONTHS[4], 418, [["Engine", "corrective", 15500, 68], ["Tires", "preventive", 4200]]),
-  rec("m-ht01-6", "ht01", MONTHS[5], 425, [["Engine", "preventive", 5800, 22], ["Final Drives", "corrective", 11000, 44], ["Tires", "preventive", 8500]]),
-  rec("m-ht04-5", "ht04", MONTHS[4], 420, [["Engine", "preventive", 4900, 18], ["Tires", "preventive", 6700]]),
-  rec("m-ht04-6", "ht04", MONTHS[5], 424, [["Engine", "preventive", 4800, 18], ["Hydraulics", "preventive", 2700, 10]]),
-  rec("m-ht06-5", "ht06", MONTHS[4], 380, [["Engine", "preventive", 3600, 14], ["Brakes", "preventive", 2000]]),
-  rec("m-ht06-6", "ht06", MONTHS[5], 382, [["Engine", "preventive", 3500, 14], ["Tires", "preventive", 5000]]),
-  rec("m-ld01-5", "ld01", MONTHS[4], 376, [["Hydraulics", "preventive", 9000, 30], ["Tires", "preventive", 7200]]),
-  rec("m-ld01-6", "ld01", MONTHS[5], 374, [["Final Drives", "preventive", 6900, 24], ["Engine", "preventive", 5600, 20]]),
-  rec("m-mht01-5", "m-ht1", MONTHS[4], 352, [["Engine", "corrective", 12500, 54], ["Undercarriage", "preventive", 3500]]),
-  rec("m-mht01-6", "m-ht1", MONTHS[5], 350, [["Engine", "corrective", 14000, 60], ["Brakes", "corrective", 5000, 22], ["Tires", "preventive", 4000]]),
+const PROFILES: MaintProfile[] = [
+  { unitId: "ht01", hours: 415, perHr: 56, sched: 0.45, events: 9, corr: [["Engine", 4.4], ["Final Drives", 3.8], ["Hydraulics", 3.9], ["Brakes", 4.0]] },
+  { unitId: "ht04", hours: 420, perHr: 28, sched: 0.85, events: 3, corr: [["Electrical", 4.2], ["Cooling", 3.9]] },
+  { unitId: "ht06", hours: 380, perHr: 24, sched: 0.70, events: 5, corr: [["Brakes", 3.8], ["Transmission", 3.9]] },
+  { unitId: "ld01", hours: 375, perHr: 42, sched: 0.65, events: 6, corr: [["Hydraulics", 3.9], ["Final Drives", 4.0]] },
+  { unitId: "m-ht1", hours: 350, perHr: 47, sched: 0.50, events: 8, corr: [["Engine", 4.3], ["Undercarriage", 2.6], ["Transmission", 3.9]] },
 ];
+
+const wob = (i: number, s: number) => 1 + 0.1 * Math.sin(i * 1.1 + s);
+
+function genMaint(): MaintRecord[] {
+  const n = HISTORY_MONTHS.length;
+  const out: MaintRecord[] = [];
+  PROFILES.forEach((p, pi) => {
+    const monthlyTotal = p.perHr * p.hours;
+    const prevMonthly = monthlyTotal * p.sched;
+    const eventCost = p.events > 0 ? (monthlyTotal * (1 - p.sched) * n) / p.events : 0;
+    const eventMonths = new Set<number>();
+    for (let e = 0; e < p.events; e++) eventMonths.add(Math.round(((e + 0.5) * n) / p.events) % n);
+
+    HISTORY_MONTHS.forEach((month, i) => {
+      const esc = 1 + 0.012 * i; // gentle aging escalation across the year
+      const pv = prevMonthly * esc * wob(i, pi);
+      const lines: LineSeed[] = [];
+      lines.push(["Engine", "preventive", Math.round(pv * 0.55), Math.max(12, Math.round((pv * 0.55) / 260))]);
+      if (i % 3 === 0) lines.push(["Tires", "preventive", Math.round(pv * 0.45)]);
+      else lines.push(["Hydraulics", "preventive", Math.round(pv * 0.3), Math.max(8, Math.round((pv * 0.3) / 260))]);
+      if (eventMonths.has(i)) {
+        const [sub, lpk] = p.corr[(i + pi) % p.corr.length];
+        const cost = Math.round(eventCost * wob(i, pi + 3));
+        lines.push([sub, "corrective", cost, Math.max(8, Math.round((cost / 1000) * lpk))]);
+      }
+      const hrs = Math.round(p.hours + 12 * Math.sin(i * 0.9 + pi));
+      out.push(rec(`m-${p.unitId}-${String(i).padStart(2, "0")}`, p.unitId, month, hrs, lines));
+    });
+  });
+  return out;
+}
+
+const SEED: MaintRecord[] = genMaint();
 
 interface MaintStore {
   records: MaintRecord[];

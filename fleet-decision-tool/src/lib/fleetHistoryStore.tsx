@@ -12,7 +12,7 @@ import { SEED_UNITS } from "./fleetStore";
 import { HISTORY_MONTHS } from "./periodStore";
 import type { FleetMonth } from "./types";
 
-const KEY = "fleet-tool-fleethist-v2";
+const KEY = "fleet-tool-fleethist-v3";
 
 /** Back-derive a monthly meter history from the current fleet: the latest month
  *  equals each unit's current hours, stepping back by annualHours / 12. */
