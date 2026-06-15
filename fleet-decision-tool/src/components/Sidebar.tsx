@@ -118,7 +118,7 @@ export function Sidebar() {
           </span>
           <span className={`${LABEL_REVEAL} flex flex-col leading-tight`}>
             <span className="text-sm font-medium text-ink">Fleet team</span>
-            <span className="text-[11px] text-inkfaint">Fable 5 · beta</span>
+            <span className="text-[11px] text-inkfaint">Beta</span>
           </span>
         </div>
       </aside>
