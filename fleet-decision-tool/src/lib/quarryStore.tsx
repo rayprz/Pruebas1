@@ -5,12 +5,17 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import type { Quarry, QuarryConfig, QuarryFront, QuarryProduct } from "./types";
+import { api } from "./config";
+import { JSON_HEADERS, useSyncedList } from "./clientSync";
 
-const KEY = "fleet-tool-quarries-v1";
+// Quarry business data lives in the DB; activeQuarryId / selectedQuarryIds are
+// per-user UI preferences kept in localStorage under this key.
+const UI_KEY = "fleet-tool-quarry-ui-v1";
 
 // --- Detailed model configs per quarry ------------------------------------
 
@@ -131,8 +136,22 @@ function blankConfig(): QuarryConfig {
   };
 }
 
+const PLACEHOLDER: Quarry = {
+  id: "",
+  name: "—",
+  region: "—",
+  config: blankConfig(),
+  productionTons: 0,
+  haulKm: 0,
+  loaderClassId: "wl-980",
+  truckClassId: "ht-773",
+};
+
 interface QuarryStore {
   quarries: Quarry[];
+  isLoading: boolean;
+  isSyncing: boolean;
+  error: string | null;
   activeQuarryId: string;
   active: Quarry;
   config: QuarryConfig;
@@ -159,78 +178,98 @@ interface QuarryStore {
 
 const QuarryContext = createContext<QuarryStore | null>(null);
 
-export function QuarryProvider({ children }: { children: ReactNode }) {
-  const [quarries, setQuarries] = useState<Quarry[]>(DEFAULT_QUARRIES);
-  const [activeQuarryId, setActiveQuarryId] = useState<string>(DEFAULT_QUARRIES[0].id);
-  const [selectedQuarryIds, setSelectedQuarryIds] = useState<string[]>(DEFAULT_QUARRIES.map((q) => q.id));
+const putQuarry = (q: Quarry) =>
+  fetch(api(`/api/quarries/${q.id}`), { method: "PUT", headers: JSON_HEADERS, body: JSON.stringify(q) });
+const delQuarry = (id: string) => fetch(api(`/api/quarries/${id}`), { method: "DELETE" });
 
+export function QuarryProvider({ children }: { children: ReactNode }) {
+  const { items: quarries, isLoading, isSyncing, error, mutate } = useSyncedList<Quarry>("/api/quarries");
+  const [activeQuarryId, setActiveQuarryId] = useState<string>("");
+  const [selectedQuarryIds, setSelectedQuarryIds] = useState<string[]>([]);
+  const uiInit = useRef(false);
+
+  // Initialize UI prefs (active + selection) once the quarries have loaded.
   useEffect(() => {
+    if (uiInit.current || quarries.length === 0) return;
+    uiInit.current = true;
+    const ids = quarries.map((q) => q.id);
+    let savedActive = "";
+    let savedSelected: string[] | undefined;
     try {
-      const raw = localStorage.getItem(KEY);
+      const raw = localStorage.getItem(UI_KEY);
       if (raw) {
-        const saved = JSON.parse(raw) as { quarries?: Quarry[]; activeQuarryId?: string; selectedQuarryIds?: string[] };
-        if (saved.quarries?.length) {
-          setQuarries(saved.quarries);
-          setActiveQuarryId(
-            saved.activeQuarryId && saved.quarries.some((q) => q.id === saved.activeQuarryId)
-              ? saved.activeQuarryId
-              : saved.quarries[0].id
-          );
-          const ids = saved.quarries.map((q) => q.id);
-          const sel = saved.selectedQuarryIds?.filter((id) => ids.includes(id));
-          setSelectedQuarryIds(sel && sel.length ? sel : ids);
-        }
+        const s = JSON.parse(raw) as { activeQuarryId?: string; selectedQuarryIds?: string[] };
+        savedActive = s.activeQuarryId ?? "";
+        savedSelected = s.selectedQuarryIds;
       }
     } catch {
       /* ignore */
     }
-  }, []);
+    setActiveQuarryId(ids.includes(savedActive) ? savedActive : ids[0]);
+    const sel = savedSelected?.filter((id) => ids.includes(id));
+    setSelectedQuarryIds(sel && sel.length ? sel : ids);
+  }, [quarries]);
+
+  const persistUi = (nextActive: string, nextSelected: string[]) => {
+    try {
+      localStorage.setItem(UI_KEY, JSON.stringify({ activeQuarryId: nextActive, selectedQuarryIds: nextSelected }));
+    } catch {
+      /* ignore */
+    }
+  };
 
   const store = useMemo<QuarryStore>(() => {
-    const persist = (nextQuarries: Quarry[], nextActive: string, nextSelected: string[] = selectedQuarryIds) => {
-      const ids = nextQuarries.map((q) => q.id);
-      const sel = nextSelected.filter((id) => ids.includes(id));
-      const selected = sel.length ? sel : ids;
-      setQuarries(nextQuarries);
-      setActiveQuarryId(nextActive);
-      setSelectedQuarryIds(selected);
-      try {
-        localStorage.setItem(KEY, JSON.stringify({ quarries: nextQuarries, activeQuarryId: nextActive, selectedQuarryIds: selected }));
-      } catch {
-        /* ignore */
-      }
+    // Persist one quarry to the API + optimistically update the list.
+    const saveQuarry = (updated: Quarry) =>
+      mutate(quarries.map((q) => (q.id === updated.id ? updated : q)), () => putQuarry(updated));
+    const patchQuarry = (id: string, fn: (q: Quarry) => Quarry) => {
+      const q = quarries.find((x) => x.id === id);
+      if (q) saveQuarry(fn(q));
     };
-    const patchQuarry = (id: string, fn: (q: Quarry) => Quarry) =>
-      persist(quarries.map((q) => (q.id === id ? fn(q) : q)), activeQuarryId);
     const patchConfig = (fn: (c: QuarryConfig) => QuarryConfig) =>
       patchQuarry(activeQuarryId, (q) => ({ ...q, config: fn(q.config) }));
     const mapFront = (frontId: string, fn: (f: QuarryFront) => QuarryFront) =>
       patchConfig((c) => ({ ...c, fronts: c.fronts.map((f) => (f.id === frontId ? fn(f) : f)) }));
 
-    const active = quarries.find((q) => q.id === activeQuarryId) ?? quarries[0];
+    const active = quarries.find((q) => q.id === activeQuarryId) ?? quarries[0] ?? PLACEHOLDER;
 
     return {
       quarries,
+      isLoading,
+      isSyncing,
+      error,
       activeQuarryId,
       active,
       config: active.config,
       selectedQuarryIds,
       selectedQuarries: quarries.filter((q) => selectedQuarryIds.includes(q.id)),
-      setSelectedQuarries: (ids) => persist(quarries, activeQuarryId, ids),
-      setActiveQuarry: (id) => persist(quarries, id),
+      setSelectedQuarries: (ids) => {
+        setSelectedQuarryIds(ids);
+        persistUi(activeQuarryId, ids);
+      },
+      setActiveQuarry: (id) => {
+        setActiveQuarryId(id);
+        persistUi(id, selectedQuarryIds);
+      },
       addQuarry: () => {
         const id = `q-${Date.now()}`;
-        persist(
-          [...quarries, { id, name: "New quarry", region: active.region, config: blankConfig(), productionTons: 1_000_000, haulKm: 1.5, loaderClassId: "wl-980", truckClassId: "ht-773" }],
-          id,
-          [...selectedQuarryIds, id]
-        );
+        const nq: Quarry = { id, name: "New quarry", region: active.region, config: blankConfig(), productionTons: 1_000_000, haulKm: 1.5, loaderClassId: "wl-980", truckClassId: "ht-773" };
+        mutate([...quarries, nq], () => putQuarry(nq));
+        const nextSel = [...selectedQuarryIds, id];
+        setActiveQuarryId(id);
+        setSelectedQuarryIds(nextSel);
+        persistUi(id, nextSel);
       },
       updateQuarry: (id, patch) => patchQuarry(id, (q) => ({ ...q, ...patch })),
       removeQuarry: (id) => {
         if (quarries.length <= 1) return;
         const next = quarries.filter((q) => q.id !== id);
-        persist(next, activeQuarryId === id ? next[0].id : activeQuarryId);
+        mutate(next, () => delQuarry(id));
+        const nextSel = selectedQuarryIds.filter((x) => x !== id);
+        const nextActive = activeQuarryId === id ? next[0].id : activeQuarryId;
+        setSelectedQuarryIds(nextSel);
+        setActiveQuarryId(nextActive);
+        persistUi(nextActive, nextSel);
       },
       update: (patch) => patchConfig((c) => ({ ...c, ...patch })),
       updateFront: (frontId, patch) => mapFront(frontId, (f) => ({ ...f, ...patch })),
@@ -269,7 +308,7 @@ export function QuarryProvider({ children }: { children: ReactNode }) {
         if (seed) patchConfig(() => structuredClone(seed));
       },
     };
-  }, [quarries, activeQuarryId, selectedQuarryIds]);
+  }, [quarries, activeQuarryId, selectedQuarryIds, isLoading, isSyncing, error, mutate]);
 
   return <QuarryContext.Provider value={store}>{children}</QuarryContext.Provider>;
 }

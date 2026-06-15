@@ -1,17 +1,10 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { EQUIVALENCE_CLASSES } from "@/data/catalog";
 import type { EquivalenceClass } from "./types";
-
-const KEY = "fleet-tool-catalog-overrides-v1";
+import { api } from "./config";
+import { JSON_HEADERS, useSyncedValue } from "./clientSync";
 
 type Overrides = Record<string, Partial<EquivalenceClass>>;
 
@@ -20,6 +13,9 @@ interface CatalogStore {
   classes: EquivalenceClass[];
   classById: Map<string, EquivalenceClass>;
   overrides: Overrides;
+  isLoading: boolean;
+  isSyncing: boolean;
+  error: string | null;
   updateClass: (id: string, patch: Partial<EquivalenceClass>) => void;
   resetClass: (id: string) => void;
   resetAll: () => void;
@@ -28,48 +24,36 @@ interface CatalogStore {
 
 const CatalogContext = createContext<CatalogStore | null>(null);
 
-export function CatalogProvider({ children }: { children: ReactNode }) {
-  const [overrides, setOverrides] = useState<Overrides>({});
+const putOverrides = (next: Overrides) =>
+  fetch(api("/api/catalog"), { method: "PUT", headers: JSON_HEADERS, body: JSON.stringify(next) });
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) setOverrides(JSON.parse(raw) as Overrides);
-    } catch {
-      /* ignore */
-    }
-  }, []);
+export function CatalogProvider({ children }: { children: ReactNode }) {
+  const { value: overrides, isLoading, isSyncing, error, mutate } = useSyncedValue<Overrides>(
+    "/api/catalog",
+    {}
+  );
 
   const store = useMemo<CatalogStore>(() => {
-    const persist = (next: Overrides) => {
-      setOverrides(next);
-      try {
-        localStorage.setItem(KEY, JSON.stringify(next));
-      } catch {
-        /* storage unavailable */
-      }
-    };
-
-    const classes = EQUIVALENCE_CLASSES.map((c) =>
-      overrides[c.id] ? { ...c, ...overrides[c.id] } : c
-    );
+    const save = (next: Overrides) => mutate(next, () => putOverrides(next));
+    const classes = EQUIVALENCE_CLASSES.map((c) => (overrides[c.id] ? { ...c, ...overrides[c.id] } : c));
     const classById = new Map(classes.map((c) => [c.id, c]));
-
     return {
       classes,
       classById,
       overrides,
-      updateClass: (id, patch) =>
-        persist({ ...overrides, [id]: { ...overrides[id], ...patch } }),
+      isLoading,
+      isSyncing,
+      error,
+      updateClass: (id, patch) => save({ ...overrides, [id]: { ...overrides[id], ...patch } }),
       resetClass: (id) => {
         const next = { ...overrides };
         delete next[id];
-        persist(next);
+        save(next);
       },
-      resetAll: () => persist({}),
+      resetAll: () => save({}),
       isOverridden: (id) => Boolean(overrides[id]),
     };
-  }, [overrides]);
+  }, [overrides, isLoading, isSyncing, error, mutate]);
 
   return <CatalogContext.Provider value={store}>{children}</CatalogContext.Provider>;
 }

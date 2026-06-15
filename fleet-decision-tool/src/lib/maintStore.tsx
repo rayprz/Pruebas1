@@ -1,17 +1,10 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { MaintLine, MaintRecord, MaintType } from "./types";
 import { HISTORY_MONTHS } from "./periodStore";
-
-const KEY = "fleet-tool-maint-v2";
+import { api } from "./config";
+import { JSON_HEADERS, useSyncedList } from "./clientSync";
 
 export const SUBSYSTEMS = [
   "Engine",
@@ -108,6 +101,9 @@ export const SEED: MaintRecord[] = genMaint();
 
 interface MaintStore {
   records: MaintRecord[];
+  isLoading: boolean;
+  isSyncing: boolean;
+  error: string | null;
   addLine: (unitId: string, month: string, hours: number, line: Omit<MaintLine, "id">) => void;
   updateLine: (recordId: string, lineId: string, patch: Partial<MaintLine>) => void;
   removeLine: (recordId: string, lineId: string) => void;
@@ -118,52 +114,60 @@ interface MaintStore {
 
 const MaintContext = createContext<MaintStore | null>(null);
 
+const putRecord = (r: MaintRecord) =>
+  fetch(api(`/api/maint/${r.id}`), { method: "PUT", headers: JSON_HEADERS, body: JSON.stringify(r) });
+const delRecord = (id: string) => fetch(api(`/api/maint/${id}`), { method: "DELETE" });
+const bulk = (next: MaintRecord[]) =>
+  fetch(api("/api/maint"), { method: "PUT", headers: JSON_HEADERS, body: JSON.stringify(next) });
+
 export function MaintProvider({ children }: { children: ReactNode }) {
-  const [records, setRecords] = useState<MaintRecord[]>(SEED);
+  const { items: records, isLoading, isSyncing, error, mutate } = useSyncedList<MaintRecord>("/api/maint");
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) setRecords(JSON.parse(raw) as MaintRecord[]);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  const store = useMemo<MaintStore>(() => {
-    const persist = (next: MaintRecord[]) => {
-      setRecords(next);
-      try {
-        localStorage.setItem(KEY, JSON.stringify(next));
-      } catch {
-        /* ignore */
-      }
-    };
-    return {
+  const store = useMemo<MaintStore>(
+    () => ({
       records,
+      isLoading,
+      isSyncing,
+      error,
       addLine: (unitId, month, hours, line) => {
         const newLine: MaintLine = { ...line, id: `ml-${Date.now()}` };
         const existing = records.find((r) => r.unitId === unitId && r.month === month);
         if (existing) {
-          persist(records.map((r) => (r === existing ? { ...r, lines: [...r.lines, newLine] } : r)));
+          const updated = { ...existing, lines: [...existing.lines, newLine] };
+          mutate(records.map((r) => (r.id === existing.id ? updated : r)), () => putRecord(updated));
         } else {
-          persist([...records, { id: `m-${Date.now()}`, unitId, month, hours, lines: [newLine] }]);
+          const created: MaintRecord = { id: `m-${Date.now()}`, unitId, month, hours, lines: [newLine] };
+          mutate([...records, created], () => putRecord(created));
         }
       },
-      updateLine: (recordId, lineId, patch) =>
-        persist(records.map((r) => (r.id === recordId ? { ...r, lines: r.lines.map((l) => (l.id === lineId ? { ...l, ...patch } : l)) } : r))),
-      removeLine: (recordId, lineId) =>
-        persist(
-          records
-            .map((r) => (r.id === recordId ? { ...r, lines: r.lines.filter((l) => l.id !== lineId) } : r))
-            .filter((r) => r.lines.length > 0)
-        ),
-      updateRecordMeta: (recordId, patch) =>
-        persist(records.map((r) => (r.id === recordId ? { ...r, ...patch } : r))),
-      replaceRecords: (next) => persist(next),
-      reset: () => persist(SEED),
-    };
-  }, [records]);
+      updateLine: (recordId, lineId, patch) => {
+        const rec0 = records.find((r) => r.id === recordId);
+        if (!rec0) return;
+        const updated = { ...rec0, lines: rec0.lines.map((l) => (l.id === lineId ? { ...l, ...patch } : l)) };
+        mutate(records.map((r) => (r.id === recordId ? updated : r)), () => putRecord(updated));
+      },
+      removeLine: (recordId, lineId) => {
+        const rec0 = records.find((r) => r.id === recordId);
+        if (!rec0) return;
+        const newLines = rec0.lines.filter((l) => l.id !== lineId);
+        if (newLines.length === 0) {
+          mutate(records.filter((r) => r.id !== recordId), () => delRecord(recordId));
+        } else {
+          const updated = { ...rec0, lines: newLines };
+          mutate(records.map((r) => (r.id === recordId ? updated : r)), () => putRecord(updated));
+        }
+      },
+      updateRecordMeta: (recordId, patch) => {
+        const rec0 = records.find((r) => r.id === recordId);
+        if (!rec0) return;
+        const updated = { ...rec0, ...patch };
+        mutate(records.map((r) => (r.id === recordId ? updated : r)), () => putRecord(updated));
+      },
+      replaceRecords: (next) => mutate(next, () => bulk(next)),
+      reset: () => mutate(SEED, () => bulk(SEED)),
+    }),
+    [records, isLoading, isSyncing, error, mutate]
+  );
 
   return <MaintContext.Provider value={store}>{children}</MaintContext.Provider>;
 }

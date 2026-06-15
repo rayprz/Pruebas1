@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import type { SessionUser } from "@/lib/rbac";
+
+/** Cast a typed value for a Prisma Json column. */
+export const asJson = (v: unknown) => v as Prisma.InputJsonValue;
 
 export const json = <T>(data: T, init?: ResponseInit) => NextResponse.json(data, init);
 export const unauthorized = () => NextResponse.json({ error: "unauthorized" }, { status: 401 });

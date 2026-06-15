@@ -1,18 +1,11 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { SEED_UNITS } from "./fleetStore";
 import { HISTORY_MONTHS } from "./periodStore";
 import type { FleetMonth } from "./types";
-
-const KEY = "fleet-tool-fleethist-v3";
+import { api } from "./config";
+import { JSON_HEADERS, useSyncedList } from "./clientSync";
 
 /** Back-derive a monthly meter history from the current fleet: the latest month
  *  equals each unit's current hours, stepping back by annualHours / 12. */
@@ -38,6 +31,9 @@ export const SEED = seedHistory();
 
 interface FleetHistoryStore {
   months: FleetMonth[];
+  isLoading: boolean;
+  isSyncing: boolean;
+  error: string | null;
   updateMonth: (unitId: string, month: string, patch: Partial<FleetMonth>) => void;
   replaceMonths: (months: FleetMonth[]) => void;
   reset: () => void;
@@ -45,35 +41,32 @@ interface FleetHistoryStore {
 
 const FleetHistoryContext = createContext<FleetHistoryStore | null>(null);
 
-export function FleetHistoryProvider({ children }: { children: ReactNode }) {
-  const [months, setMonths] = useState<FleetMonth[]>(SEED);
+const bulk = (next: FleetMonth[]) =>
+  fetch(api("/api/fleet-history"), { method: "PUT", headers: JSON_HEADERS, body: JSON.stringify(next) });
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) setMonths(JSON.parse(raw) as FleetMonth[]);
-    } catch {
-      /* ignore */
-    }
-  }, []);
+export function FleetHistoryProvider({ children }: { children: ReactNode }) {
+  const { items: months, isLoading, isSyncing, error, mutate } = useSyncedList<FleetMonth>("/api/fleet-history");
 
   const store = useMemo<FleetHistoryStore>(() => {
-    const persist = (next: FleetMonth[]) => {
-      setMonths(next);
-      try {
-        localStorage.setItem(KEY, JSON.stringify(next));
-      } catch {
-        /* ignore */
-      }
-    };
     return {
       months,
-      updateMonth: (unitId, month, patch) =>
-        persist(months.map((m) => (m.unitId === unitId && m.month === month ? { ...m, ...patch } : m))),
-      replaceMonths: (next) => persist(next),
-      reset: () => persist(SEED),
+      isLoading,
+      isSyncing,
+      error,
+      updateMonth: (unitId, month, patch) => {
+        const existing = months.find((m) => m.unitId === unitId && m.month === month);
+        const next = months.map((m) => (m.unitId === unitId && m.month === month ? { ...m, ...patch } : m));
+        const merged = existing ? { ...existing, ...patch } : undefined;
+        mutate(next, () =>
+          merged
+            ? fetch(api("/api/fleet-history"), { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(merged) })
+            : Promise.resolve(new Response(null, { status: 200 }))
+        );
+      },
+      replaceMonths: (next) => mutate(next, () => bulk(next)),
+      reset: () => mutate(SEED, () => bulk(SEED)),
     };
-  }, [months]);
+  }, [months, isLoading, isSyncing, error, mutate]);
 
   return <FleetHistoryContext.Provider value={store}>{children}</FleetHistoryContext.Provider>;
 }

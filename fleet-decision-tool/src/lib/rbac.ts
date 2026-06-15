@@ -40,3 +40,23 @@ export async function canAccessQuarry(userId: string, quarryId: string): Promise
   const allowed = await allowedQuarryIds(userId);
   return allowed === null || allowed.includes(quarryId);
 }
+
+/**
+ * The fleet-unit ids a user may access (for resources keyed by unitId, e.g.
+ * fleet history and maintenance). `null` means unrestricted.
+ */
+export async function allowedUnitIds(userId: string): Promise<string[] | null> {
+  const quarryIds = await allowedQuarryIds(userId);
+  if (quarryIds === null) return null;
+  const units = await prisma.fleetUnit.findMany({
+    where: { quarryId: { in: quarryIds } },
+    select: { id: true },
+  });
+  return units.map((u) => u.id);
+}
+
+/** True if the user may touch maintenance/history for `unitId`. */
+export async function canAccessUnit(userId: string, unitId: string): Promise<boolean> {
+  const allowed = await allowedUnitIds(userId);
+  return allowed === null || allowed.includes(unitId);
+}

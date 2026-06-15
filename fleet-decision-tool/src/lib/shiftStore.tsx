@@ -1,17 +1,10 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { ShiftFrontEntry, ShiftRecord } from "./types";
 import { HISTORY_MONTHS } from "./periodStore";
-
-const KEY = "fleet-tool-shifts-v3";
+import { api } from "./config";
+import { JSON_HEADERS, useSyncedList } from "./clientSync";
 
 type Entry = [front: string, tons: number, downtime: number, reason: string];
 
@@ -75,6 +68,9 @@ export const SEED: ShiftRecord[] = genShifts();
 
 interface ShiftStore {
   records: ShiftRecord[];
+  isLoading: boolean;
+  isSyncing: boolean;
+  error: string | null;
   addEntry: (
     quarryId: string,
     date: string,
@@ -91,52 +87,60 @@ interface ShiftStore {
 
 const ShiftContext = createContext<ShiftStore | null>(null);
 
+const putRecord = (r: ShiftRecord) =>
+  fetch(api(`/api/shifts/${r.id}`), { method: "PUT", headers: JSON_HEADERS, body: JSON.stringify(r) });
+const delRecord = (id: string) => fetch(api(`/api/shifts/${id}`), { method: "DELETE" });
+const bulk = (next: ShiftRecord[]) =>
+  fetch(api("/api/shifts"), { method: "PUT", headers: JSON_HEADERS, body: JSON.stringify(next) });
+
 export function ShiftProvider({ children }: { children: ReactNode }) {
-  const [records, setRecords] = useState<ShiftRecord[]>(SEED);
+  const { items: records, isLoading, isSyncing, error, mutate } = useSyncedList<ShiftRecord>("/api/shifts");
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) setRecords(JSON.parse(raw) as ShiftRecord[]);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  const store = useMemo<ShiftStore>(() => {
-    const persist = (next: ShiftRecord[]) => {
-      setRecords(next);
-      try {
-        localStorage.setItem(KEY, JSON.stringify(next));
-      } catch {
-        /* ignore */
-      }
-    };
-    return {
+  const store = useMemo<ShiftStore>(
+    () => ({
       records,
+      isLoading,
+      isSyncing,
+      error,
       addEntry: (quarryId, date, sh, scheduledHours, entry) => {
         const newEntry: ShiftFrontEntry = { ...entry, id: `fe-${Date.now()}` };
         const existing = records.find((r) => r.quarryId === quarryId && r.date === date && r.shift === sh);
         if (existing) {
-          persist(records.map((r) => (r === existing ? { ...r, fronts: [...r.fronts, newEntry] } : r)));
+          const updated = { ...existing, fronts: [...existing.fronts, newEntry] };
+          mutate(records.map((r) => (r.id === existing.id ? updated : r)), () => putRecord(updated));
         } else {
-          persist([...records, { id: `s-${Date.now()}`, quarryId, date, shift: sh, scheduledHours, fronts: [newEntry] }]);
+          const created: ShiftRecord = { id: `s-${Date.now()}`, quarryId, date, shift: sh, scheduledHours, fronts: [newEntry] };
+          mutate([...records, created], () => putRecord(created));
         }
       },
-      updateEntry: (recordId, entryId, patch) =>
-        persist(records.map((r) => (r.id === recordId ? { ...r, fronts: r.fronts.map((f) => (f.id === entryId ? { ...f, ...patch } : f)) } : r))),
-      removeEntry: (recordId, entryId) =>
-        persist(
-          records
-            .map((r) => (r.id === recordId ? { ...r, fronts: r.fronts.filter((f) => f.id !== entryId) } : r))
-            .filter((r) => r.fronts.length > 0)
-        ),
-      updateRecordMeta: (recordId, patch) =>
-        persist(records.map((r) => (r.id === recordId ? { ...r, ...patch } : r))),
-      replaceRecords: (next) => persist(next),
-      reset: () => persist(SEED),
-    };
-  }, [records]);
+      updateEntry: (recordId, entryId, patch) => {
+        const rec0 = records.find((r) => r.id === recordId);
+        if (!rec0) return;
+        const updated = { ...rec0, fronts: rec0.fronts.map((f) => (f.id === entryId ? { ...f, ...patch } : f)) };
+        mutate(records.map((r) => (r.id === recordId ? updated : r)), () => putRecord(updated));
+      },
+      removeEntry: (recordId, entryId) => {
+        const rec0 = records.find((r) => r.id === recordId);
+        if (!rec0) return;
+        const newFronts = rec0.fronts.filter((f) => f.id !== entryId);
+        if (newFronts.length === 0) {
+          mutate(records.filter((r) => r.id !== recordId), () => delRecord(recordId));
+        } else {
+          const updated = { ...rec0, fronts: newFronts };
+          mutate(records.map((r) => (r.id === recordId ? updated : r)), () => putRecord(updated));
+        }
+      },
+      updateRecordMeta: (recordId, patch) => {
+        const rec0 = records.find((r) => r.id === recordId);
+        if (!rec0) return;
+        const updated = { ...rec0, ...patch };
+        mutate(records.map((r) => (r.id === recordId ? updated : r)), () => putRecord(updated));
+      },
+      replaceRecords: (next) => mutate(next, () => bulk(next)),
+      reset: () => mutate(SEED, () => bulk(SEED)),
+    }),
+    [records, isLoading, isSyncing, error, mutate]
+  );
 
   return <ShiftContext.Provider value={store}>{children}</ShiftContext.Provider>;
 }
