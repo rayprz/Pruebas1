@@ -17,11 +17,12 @@ import { csvToShifts, shiftsToCsv, summarize } from "@/lib/shiftLog";
 import { downloadCsv } from "@/lib/csv";
 import { downloadTemplate, fileToCsv } from "@/lib/xlsx";
 import { useShiftLog } from "@/lib/shiftStore";
-import { usePeriod, monthsInPeriod } from "@/lib/periodStore";
+import { usePeriod, resolveMonths } from "@/lib/periodStore";
 import type { QuarryConfig } from "@/lib/types";
 import type { QuarryResult } from "@/lib/quarry";
 import { ModuleIntro } from "@/components/ModuleIntro";
 import { InfoTip } from "@/components/InfoTip";
+import { useSort, SortHeader } from "@/components/Sortable";
 import { IconPlus, IconTrash } from "@/components/Icons";
 import {
   Button,
@@ -71,7 +72,7 @@ export function QuarryActuals({
   const quarryRecords = useMemo(() => allRecords.filter((r) => r.quarryId === quarryId), [allRecords, quarryId]);
   // Respect the global period filter from the top bar (by shift month).
   const records = useMemo(() => {
-    const window = new Set(monthsInPeriod([...new Set(quarryRecords.map((r) => r.date.slice(0, 7)))], period));
+    const window = new Set(resolveMonths([...new Set(quarryRecords.map((r) => r.date.slice(0, 7)))], period));
     return quarryRecords.filter((r) => window.has(r.date.slice(0, 7)));
   }, [quarryRecords, period]);
   const targetTph = config.targetTph;
@@ -122,6 +123,37 @@ export function QuarryActuals({
   };
 
   const flatRows = s.trend.flatMap((m) => m.fronts.map((f) => ({ m, f })));
+
+  type ByFront = (typeof s.byFront)[number];
+  const byFrontAccessors = useMemo(
+    () => ({
+      frontName: (b: ByFront) => b.frontName,
+      tons: (b: ByFront) => b.tons,
+      avgActualTph: (b: ByFront) => b.avgActualTph,
+      modelTph: (b: ByFront) => b.modelTph,
+      vsModel: (b: ByFront) => b.vsModel,
+      downtime: (b: ByFront) => b.downtime,
+    }),
+    []
+  );
+  const { sorted: sortedByFront, state: bfState, toggle: bfToggle } = useSort(s.byFront, byFrontAccessors);
+
+  type FlatRow = (typeof flatRows)[number];
+  const logAccessors = useMemo(
+    () => ({
+      date: (r: FlatRow) => r.m.date,
+      shift: (r: FlatRow) => r.m.shift,
+      front: (r: FlatRow) => r.f.frontName,
+      scheduledHours: (r: FlatRow) => r.m.scheduledHours,
+      tons: (r: FlatRow) => r.f.tons,
+      downtimeHours: (r: FlatRow) => r.f.downtimeHours,
+      actualTph: (r: FlatRow) => r.f.actualTph,
+      vsModel: (r: FlatRow) => r.f.vsModel,
+      reason: (r: FlatRow) => r.f.downtimeReason,
+    }),
+    []
+  );
+  const { sorted: sortedFlat, state: logState, toggle: logToggle } = useSort(flatRows, logAccessors);
 
   return (
     <div>
@@ -206,16 +238,16 @@ export function QuarryActuals({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-line text-left text-[11px] uppercase tracking-[0.1em] text-inkfaint">
-                  <th className="px-5 py-2.5 font-semibold">Front</th>
-                  <th className="px-3 py-2.5 text-right font-semibold">Tons</th>
-                  <th className="px-3 py-2.5 text-right font-semibold">Avg tph</th>
-                  <th className="px-3 py-2.5 text-right font-semibold">Model</th>
-                  <th className="px-3 py-2.5 text-right font-semibold">vs Model</th>
-                  <th className="px-3 py-2.5 text-right font-semibold">Down h</th>
+                  <SortHeader label="Front" sortKey="frontName" state={bfState} onSort={bfToggle} className="px-5 py-2.5" />
+                  <SortHeader label="Tons" sortKey="tons" state={bfState} onSort={bfToggle} align="right" className="px-3 py-2.5" />
+                  <SortHeader label="Avg tph" sortKey="avgActualTph" state={bfState} onSort={bfToggle} align="right" className="px-3 py-2.5" />
+                  <SortHeader label="Model" sortKey="modelTph" state={bfState} onSort={bfToggle} align="right" className="px-3 py-2.5" />
+                  <SortHeader label="vs Model" sortKey="vsModel" state={bfState} onSort={bfToggle} align="right" className="px-3 py-2.5" />
+                  <SortHeader label="Down h" sortKey="downtime" state={bfState} onSort={bfToggle} align="right" className="px-3 py-2.5" />
                 </tr>
               </thead>
               <tbody>
-                {s.byFront.map((b) => (
+                {sortedByFront.map((b) => (
                   <tr key={b.frontName} className="border-b border-line/60 last:border-0">
                     <td className="px-5 py-2 font-medium text-ink">{b.frontName}</td>
                     <td className="px-3 py-2 text-right tabular text-inksoft">{tons(b.tons)}</td>
@@ -282,20 +314,20 @@ export function QuarryActuals({
           <table className="w-full min-w-[900px] text-sm">
             <thead>
               <tr className="border-b border-line text-left text-[11px] uppercase tracking-[0.1em] text-inkfaint">
-                <th className="px-4 py-3 font-semibold">Date</th>
-                <th className="px-4 py-3 font-semibold">Shift</th>
-                <th className="px-4 py-3 font-semibold">Front</th>
-                <th className="px-4 py-3 text-right font-semibold">Sched h</th>
-                <th className="px-4 py-3 text-right font-semibold">Tons</th>
-                <th className="px-4 py-3 text-right font-semibold">Down h</th>
-                <th className="px-4 py-3 text-right font-semibold">tph <InfoTip title="Front actual tph" formula="tons ÷ (sched − down)" align="right" /></th>
-                <th className="px-4 py-3 text-right font-semibold">vs Model <InfoTip title="vs model" formula="actual tph ÷ model front tph" align="right" /></th>
-                <th className="px-4 py-3 font-semibold">Reason</th>
+                <SortHeader label="Date" sortKey="date" state={logState} onSort={logToggle} className="px-4 py-3" />
+                <SortHeader label="Shift" sortKey="shift" state={logState} onSort={logToggle} className="px-4 py-3" />
+                <SortHeader label="Front" sortKey="front" state={logState} onSort={logToggle} className="px-4 py-3" />
+                <SortHeader label="Sched h" sortKey="scheduledHours" state={logState} onSort={logToggle} align="right" className="px-4 py-3" />
+                <SortHeader label="Tons" sortKey="tons" state={logState} onSort={logToggle} align="right" className="px-4 py-3" />
+                <SortHeader label="Down h" sortKey="downtimeHours" state={logState} onSort={logToggle} align="right" className="px-4 py-3" />
+                <SortHeader label="tph" sortKey="actualTph" state={logState} onSort={logToggle} align="right" className="px-4 py-3"><InfoTip title="Front actual tph" formula="tons ÷ (sched − down)" align="right" /></SortHeader>
+                <SortHeader label="vs Model" sortKey="vsModel" state={logState} onSort={logToggle} align="right" className="px-4 py-3"><InfoTip title="vs model" formula="actual tph ÷ model front tph" align="right" /></SortHeader>
+                <SortHeader label="Reason" sortKey="reason" state={logState} onSort={logToggle} className="px-4 py-3" />
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
-              {flatRows.map(({ m, f }) => (
+              {sortedFlat.map(({ m, f }) => (
                 <tr key={f.id} className="border-b border-line/60 last:border-0 hover:bg-panel/50">
                   <td className="px-4 py-2 text-inksoft">{m.date}</td>
                   <td className="px-4 py-2 font-medium text-ink">{m.shift}</td>

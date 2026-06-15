@@ -20,7 +20,7 @@ import { useQuarry } from "@/lib/quarryStore";
 import { useShiftLog } from "@/lib/shiftStore";
 import { useMaint } from "@/lib/maintStore";
 import { useFleetHistory } from "@/lib/fleetHistoryStore";
-import { usePeriod, monthsInPeriod } from "@/lib/periodStore";
+import { usePeriod, resolveMonths } from "@/lib/periodStore";
 import { ModuleIntro } from "@/components/ModuleIntro";
 import { Button, Card, PageHeader, SectionTitle, Segmented, Select, StatCard } from "@/components/ui";
 
@@ -30,7 +30,7 @@ export default function TrendsPage() {
   const { params } = useParams();
   const { classById } = useCatalog();
   const { units } = useFleet();
-  const { quarries } = useQuarry();
+  const { selectedQuarries: quarries } = useQuarry();
   const { records: shiftRecords } = useShiftLog();
   const { records: maintRecords } = useMaint();
   const { months: fleetMonths } = useFleetHistory();
@@ -43,7 +43,7 @@ export default function TrendsPage() {
 
   const months = useMemo(() => {
     const all = [...new Set(fleetMonths.map((m) => m.month))];
-    return monthsInPeriod(all, period);
+    return resolveMonths(all, period);
   }, [fleetMonths, period]);
 
   const hist = useMemo(

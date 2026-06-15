@@ -15,13 +15,15 @@ import {
 import { MODELS } from "@/data/catalog";
 import { BASE_YEAR, CAPEX_HORIZON, useFleet } from "@/lib/fleetStore";
 import { useCatalog } from "@/lib/catalogStore";
+import { useQuarry } from "@/lib/quarryStore";
 import { unitCapexEvents, usd, usdCompact, type CapexEvent } from "@/lib/engine";
 import { useFleetHistory } from "@/lib/fleetHistoryStore";
-import { usePeriod, monthsInPeriod } from "@/lib/periodStore";
+import { usePeriod, resolveMonths } from "@/lib/periodStore";
 import { unitAt } from "@/lib/history";
 import type { FleetMonth } from "@/lib/types";
 import { BrandBadge } from "@/components/BrandBadge";
 import { MiniTrend } from "@/components/MiniTrend";
+import { useSort, SortHeader } from "@/components/Sortable";
 import { ModuleIntro } from "@/components/ModuleIntro";
 import { InfoTip } from "@/components/InfoTip";
 import { Card, PageHeader, SectionTitle, StatCard } from "@/components/ui";
@@ -29,16 +31,23 @@ import { Card, PageHeader, SectionTitle, StatCard } from "@/components/ui";
 export default function CapexPage() {
   const { units } = useFleet();
   const { classById } = useCatalog();
+  const { selectedQuarryIds } = useQuarry();
   const { months: fleetMonths } = useFleetHistory();
   const { period } = usePeriod();
 
   const modelById = useMemo(() => new Map(MODELS.map((m) => [m.id, m])), []);
 
+  // Scoped by the global quarry multi-select in the top bar.
+  const scopedUnits = useMemo(
+    () => units.filter((u) => selectedQuarryIds.includes(u.quarryId)),
+    [units, selectedQuarryIds]
+  );
+
   const capexTrend = useMemo(() => {
-    const months = monthsInPeriod([...new Set(fleetMonths.map((m) => m.month))], period);
+    const months = resolveMonths([...new Set(fleetMonths.map((m) => m.month))], period);
     const fmByKey = new Map<string, FleetMonth>(fleetMonths.map((m) => [`${m.unitId}|${m.month}`, m]));
     return months.map((month) => {
-      const value = units.reduce((s, u) => {
+      const value = scopedUnits.reduce((s, u) => {
         const cls = classById.get(u.classId);
         if (!cls) return s;
         const hu = unitAt(u, fmByKey, month);
@@ -46,17 +55,31 @@ export default function CapexPage() {
       }, 0);
       return { month, value };
     });
-  }, [fleetMonths, period, units, classById]);
+  }, [fleetMonths, period, scopedUnits, classById]);
 
   const events = useMemo(() => {
     const all: CapexEvent[] = [];
-    for (const u of units) {
+    for (const u of scopedUnits) {
       const cls = classById.get(u.classId);
       if (!cls) continue;
       all.push(...unitCapexEvents(cls, u, BASE_YEAR, CAPEX_HORIZON));
     }
     return all.sort((a, b) => a.year - b.year || a.unitNo.localeCompare(b.unitNo));
-  }, [units, classById]);
+  }, [scopedUnits, classById]);
+
+  const unitById = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
+  const eventAccessors = useMemo(
+    () => ({
+      year: (e: CapexEvent) => e.year,
+      unitNo: (e: CapexEvent) => e.unitNo,
+      model: (e: CapexEvent) => modelById.get(unitById.get(e.unitId)?.modelId ?? "")?.model ?? "",
+      type: (e: CapexEvent) => e.type,
+      hoursAtEvent: (e: CapexEvent) => e.hoursAtEvent,
+      cost: (e: CapexEvent) => e.cost,
+    }),
+    [unitById, modelById]
+  );
+  const { sorted: sortedEvents, state, toggle } = useSort(events, eventAccessors, { key: "year", dir: "asc" });
 
   const years = useMemo(
     () => Array.from({ length: CAPEX_HORIZON }, (_, i) => BASE_YEAR + 1 + i),
@@ -148,23 +171,17 @@ export default function CapexPage() {
           <table className="w-full min-w-[680px] text-sm">
             <thead>
               <tr className="border-b border-line text-left text-[11px] uppercase tracking-[0.1em] text-inkfaint">
-                <th className="px-4 py-3 font-semibold">Year</th>
-                <th className="px-4 py-3 font-semibold">Unit</th>
-                <th className="px-4 py-3 font-semibold">Model</th>
-                <th className="px-4 py-3 font-semibold">
-                  Event <InfoTip title="Event type" formula="overhaul at each interval; replacement at life hours" align="left" />
-                </th>
-                <th className="px-4 py-3 text-right font-semibold">
-                  Hours at event <InfoTip title="Hours at event" formula="current + annual hours × years ahead" align="right" />
-                </th>
-                <th className="px-4 py-3 text-right font-semibold">
-                  Cost <InfoTip title="Event cost" formula="overhaul = price × overhaul %; replacement = new price" align="right" />
-                </th>
+                <SortHeader label="Year" sortKey="year" state={state} onSort={toggle} className="px-4 py-3" />
+                <SortHeader label="Unit" sortKey="unitNo" state={state} onSort={toggle} className="px-4 py-3" />
+                <SortHeader label="Model" sortKey="model" state={state} onSort={toggle} className="px-4 py-3" />
+                <SortHeader label="Event" sortKey="type" state={state} onSort={toggle} className="px-4 py-3"><InfoTip title="Event type" formula="overhaul at each interval; replacement at life hours" align="left" /></SortHeader>
+                <SortHeader label="Hours at event" sortKey="hoursAtEvent" state={state} onSort={toggle} align="right" className="px-4 py-3"><InfoTip title="Hours at event" formula="current + annual hours × years ahead" align="right" /></SortHeader>
+                <SortHeader label="Cost" sortKey="cost" state={state} onSort={toggle} align="right" className="px-4 py-3"><InfoTip title="Event cost" formula="overhaul = price × overhaul %; replacement = new price" align="right" /></SortHeader>
               </tr>
             </thead>
             <tbody>
-              {events.map((e, i) => {
-                const model = modelById.get(units.find((u) => u.id === e.unitId)?.modelId ?? "");
+              {sortedEvents.map((e, i) => {
+                const model = modelById.get(unitById.get(e.unitId)?.modelId ?? "");
                 return (
                   <tr key={i} className="border-b border-line/60 last:border-0 hover:bg-panel/50">
                     <td className="px-4 py-2.5 tabular font-medium text-ink">{e.year}</td>

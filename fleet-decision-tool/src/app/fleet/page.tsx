@@ -16,13 +16,14 @@ import { useQuarry } from "@/lib/quarryStore";
 import { useMaint } from "@/lib/maintStore";
 import { actualMaintPerHrByUnit } from "@/lib/maintLog";
 import { useFleetHistory } from "@/lib/fleetHistoryStore";
-import { usePeriod, monthsInPeriod } from "@/lib/periodStore";
+import { usePeriod, resolveMonths } from "@/lib/periodStore";
 import { unitAt } from "@/lib/history";
 import { csvToUnits, downloadCsv, unitsToCsv } from "@/lib/csv";
 import { downloadTemplate, fileToCsv } from "@/lib/xlsx";
 import type { FleetMonth, FleetUnit, Scenario } from "@/lib/types";
 import { BrandBadge } from "@/components/BrandBadge";
 import { MiniTrend } from "@/components/MiniTrend";
+import { useSort, SortHeader } from "@/components/Sortable";
 import { IconPlus, IconTrash } from "@/components/Icons";
 import { ModuleIntro } from "@/components/ModuleIntro";
 import { InfoTip } from "@/components/InfoTip";
@@ -54,23 +55,22 @@ export default function FleetPage() {
   const { params } = useParams();
   const { classById, classes } = useCatalog();
   const { units, addUnit, updateUnit, removeUnit, replaceUnits, resetAll } = useFleet();
-  const { quarries } = useQuarry();
+  const { quarries, selectedQuarryIds } = useQuarry();
   const { records: maintRecords } = useMaint();
   const { months: fleetMonths } = useFleetHistory();
   const { period } = usePeriod();
   const [scenario, setScenario] = useState<Scenario>("medium");
-  const [quarryFilter, setQuarryFilter] = useState<string>("all");
   const [adding, setAdding] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const modelById = useMemo(() => new Map(MODELS.map((m) => [m.id, m])), []);
-  const quarryName = useMemo(() => new Map(quarries.map((q) => [q.id, q.name])), [quarries]);
   const quarryOptions = quarries.map((q) => ({ value: q.id, label: q.name }));
 
+  // Scoped by the global quarry multi-select in the top bar.
   const visibleUnits = useMemo(
-    () => (quarryFilter === "all" ? units : units.filter((u) => u.quarryId === quarryFilter)),
-    [units, quarryFilter]
+    () => units.filter((u) => selectedQuarryIds.includes(u.quarryId)),
+    [units, selectedQuarryIds]
   );
 
   const maintOverride = useMemo(
@@ -102,6 +102,24 @@ export default function FleetPage() {
     return { rows, invalid };
   }, [visibleUnits, scenario, classById, modelById, params, maintOverride]);
 
+  type Row = (typeof rows)[number];
+  const accessors = useMemo(
+    () => ({
+      unitNo: (r: Row) => r.u.unitNo,
+      model: (r: Row) => r.model.model,
+      quarry: (r: Row) => r.u.quarryId,
+      currentHours: (r: Row) => r.u.currentHours,
+      lifePct: (r: Row) => r.lifePct,
+      annualHours: (r: Row) => r.u.annualHours,
+      availability: (r: Row) => r.u.availability,
+      operating: (r: Row) => r.cost.operating,
+      total: (r: Row) => r.cost.total,
+      status: (r: Row) => r.u.status,
+    }),
+    []
+  );
+  const { sorted, state, toggle } = useSort(rows, accessors, { key: "unitNo", dir: "asc" });
+
   const totals = useMemo(() => {
     const operating = rows.reduce((s, r) => s + r.cost.operating, 0);
     const owning = rows.reduce((s, r) => s + r.cost.owning, 0);
@@ -111,7 +129,7 @@ export default function FleetPage() {
   }, [rows, visibleUnits]);
 
   const opexTrend = useMemo(() => {
-    const months = monthsInPeriod([...new Set(fleetMonths.map((m) => m.month))], period);
+    const months = resolveMonths([...new Set(fleetMonths.map((m) => m.month))], period);
     const fmByKey = new Map<string, FleetMonth>(fleetMonths.map((m) => [`${m.unitId}|${m.month}`, m]));
     return months.map((month) => {
       const value = visibleUnits.reduce((s, u) => {
@@ -192,12 +210,9 @@ export default function FleetPage() {
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <span className="text-[11px] uppercase tracking-[0.12em] text-inkfaint">Quarry</span>
-        <Select
-          value={quarryFilter}
-          onChange={setQuarryFilter}
-          options={[{ value: "all", label: "All quarries" }, ...quarryOptions]}
-        />
+        <span className="text-[11px] uppercase tracking-[0.12em] text-inkfaint">
+          {visibleUnits.length} units · scope in top bar
+        </span>
         <span className="mx-1 h-5 w-px bg-line" />
         <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,text/csv" onChange={onFile} className="hidden" />
         <Button variant="ghost" onClick={() => fileRef.current?.click()}>Import</Button>
@@ -221,29 +236,21 @@ export default function FleetPage() {
           <table className="w-full min-w-[1000px] text-sm">
             <thead>
               <tr className="border-b border-line text-left text-[11px] uppercase tracking-[0.1em] text-inkfaint">
-                <th className="px-4 py-3 font-semibold">Unit</th>
-                <th className="px-4 py-3 font-semibold">Model</th>
-                <th className="px-4 py-3 font-semibold">Quarry</th>
-                <th className="px-4 py-3 text-right font-semibold">Hours</th>
-                <th className="px-4 py-3 text-right font-semibold">
-                  Life <InfoTip title="Life used" formula="current hours ÷ life hours" align="right">Hover a unit's % for the resulting maintenance age factor.</InfoTip>
-                </th>
-                <th className="px-4 py-3 text-right font-semibold">Hrs/yr</th>
-                <th className="px-4 py-3 text-right font-semibold">
-                  Avail <InfoTip title="Availability" formula="mechanical availability 0–1; feeds the Quarry model" align="right" />
-                </th>
-                <th className="px-4 py-3 text-right font-semibold">
-                  Op $/yr <InfoTip title="Operating cost / year" formula="(fuel + maint×ageFactor + operator) × hrs/yr" align="right" />
-                </th>
-                <th className="px-4 py-3 text-right font-semibold">
-                  Total $/yr <InfoTip title="Total cost / year" formula="operating + owning (deprec.+interest+insurance)" align="right" />
-                </th>
-                <th className="px-4 py-3 font-semibold">Status</th>
+                <SortHeader label="Unit" sortKey="unitNo" state={state} onSort={toggle} className="px-4 py-3" />
+                <SortHeader label="Model" sortKey="model" state={state} onSort={toggle} className="px-4 py-3" />
+                <SortHeader label="Quarry" sortKey="quarry" state={state} onSort={toggle} className="px-4 py-3" />
+                <SortHeader label="Hours" sortKey="currentHours" state={state} onSort={toggle} align="right" className="px-4 py-3" />
+                <SortHeader label="Life" sortKey="lifePct" state={state} onSort={toggle} align="right" className="px-4 py-3"><InfoTip title="Life used" formula="current hours ÷ life hours" align="right">Hover a unit&apos;s % for the resulting maintenance age factor.</InfoTip></SortHeader>
+                <SortHeader label="Hrs/yr" sortKey="annualHours" state={state} onSort={toggle} align="right" className="px-4 py-3" />
+                <SortHeader label="Avail" sortKey="availability" state={state} onSort={toggle} align="right" className="px-4 py-3"><InfoTip title="Availability" formula="mechanical availability 0–1; feeds the Quarry model" align="right" /></SortHeader>
+                <SortHeader label="Op $/yr" sortKey="operating" state={state} onSort={toggle} align="right" className="px-4 py-3"><InfoTip title="Operating cost / year" formula="(fuel + maint×ageFactor + operator) × hrs/yr" align="right" /></SortHeader>
+                <SortHeader label="Total $/yr" sortKey="total" state={state} onSort={toggle} align="right" className="px-4 py-3"><InfoTip title="Total cost / year" formula="operating + owning (deprec.+interest+insurance)" align="right" /></SortHeader>
+                <SortHeader label="Status" sortKey="status" state={state} onSort={toggle} className="px-4 py-3" />
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ u, cls, model, cost, lifePct }) => (
+              {sorted.map(({ u, cls, model, cost, lifePct }) => (
                 <tr key={u.id} className="border-b border-line/60 last:border-0 hover:bg-panel/50">
                   <td className="px-4 py-2 font-medium text-ink">
                     {u.unitNo}

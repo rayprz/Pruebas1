@@ -16,6 +16,7 @@ import { BrandBadge, EstimateBadge } from "@/components/BrandBadge";
 import { ParamsPanel } from "@/components/ParamsPanel";
 import { ModuleIntro } from "@/components/ModuleIntro";
 import { InfoTip } from "@/components/InfoTip";
+import { useSort, SortHeader } from "@/components/Sortable";
 import { Card, PageHeader, Pill } from "@/components/ui";
 
 const FORMULAS = [
@@ -47,6 +48,20 @@ export default function CalculatorPage() {
     });
   }, [category, activeBrands, classById, params]);
 
+
+  type Row = (typeof rows)[number];
+  const accessors = useMemo(
+    () => ({
+      model: (r: Row) => r.mod.model,
+      class: (r: Row) => r.cls.name,
+      fuel: (r: Row) => r.cls.fuelGalPerHr.moderate,
+      s0: (r: Row) => r.scenarios[0]?.total ?? 0,
+      s1: (r: Row) => r.scenarios[1]?.total ?? 0,
+      s2: (r: Row) => r.scenarios[2]?.total ?? 0,
+    }),
+    []
+  );
+  const { sorted, state, toggle } = useSort(rows, accessors, { key: "model", dir: "asc" });
 
   const toggleBrand = (b: Brand) =>
     setActiveBrands((prev) => {
@@ -108,15 +123,11 @@ export default function CalculatorPage() {
               <table className="w-full min-w-[720px] text-sm">
                 <thead>
                   <tr className="border-b border-line text-left text-[11px] uppercase tracking-[0.1em] text-inkfaint">
-                    <th className="px-4 py-3 font-semibold">Model</th>
-                    <th className="px-4 py-3 font-semibold">Class</th>
-                    <th className="px-4 py-3 text-right font-semibold">
-                      Fuel gal/hr
-                      <InfoTip title="Fuel burn" formula="moderate–severe gal/hr (from Catalog)" align="right" />
-                    </th>
+                    <SortHeader label="Model" sortKey="model" state={state} onSort={toggle} className="px-4 py-3" />
+                    <SortHeader label="Class" sortKey="class" state={state} onSort={toggle} className="px-4 py-3" />
+                    <SortHeader label="Fuel gal/hr" sortKey="fuel" state={state} onSort={toggle} align="right" className="px-4 py-3"><InfoTip title="Fuel burn" formula="moderate–severe gal/hr (from Catalog)" align="right" /></SortHeader>
                     {SCENARIOS.map((s, i) => (
-                      <th key={s} className="px-4 py-3 text-right font-semibold">
-                        {SCENARIO_LABELS[s]} $/hr
+                      <SortHeader key={s} label={`${SCENARIO_LABELS[s]} $/hr`} sortKey={`s${i}`} state={state} onSort={toggle} align="right" className="px-4 py-3">
                         <InfoTip
                           title={`${SCENARIO_LABELS[s]} total $/hr`}
                           formula="fuel + maintenance + operator"
@@ -124,12 +135,12 @@ export default function CalculatorPage() {
                         >
                           {i === 1 ? "Average duty at the medium weekly schedule." : i === 0 ? "Moderate duty, low weekly hours." : "Severe duty, high weekly hours."}
                         </InfoTip>
-                      </th>
+                      </SortHeader>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map(({ mod, cls, scenarios }) => (
+                  {sorted.map(({ mod, cls, scenarios }) => (
                     <tr
                       key={mod.id}
                       className="border-b border-line/60 last:border-0 hover:bg-panel/50"

@@ -11,13 +11,14 @@ import { useCatalog } from "@/lib/catalogStore";
 import { useFleet } from "@/lib/fleetStore";
 import { useQuarry } from "@/lib/quarryStore";
 import { useMaint, SUBSYSTEMS } from "@/lib/maintStore";
-import { usePeriod, monthsInPeriod } from "@/lib/periodStore";
+import { usePeriod, resolveMonths } from "@/lib/periodStore";
 import type { MaintType } from "@/lib/types";
 import { ModuleIntro } from "@/components/ModuleIntro";
 import { InfoTip } from "@/components/InfoTip";
 import { IconPlus, IconTrash } from "@/components/Icons";
 import { MaintAnalysis } from "@/components/MaintAnalysis";
 import { MiniTrend } from "@/components/MiniTrend";
+import { useSort, SortHeader } from "@/components/Sortable";
 import {
   Button,
   Card,
@@ -58,12 +59,11 @@ export default function MaintenancePage() {
   const { params } = useParams();
   const { classById } = useCatalog();
   const { units } = useFleet();
-  const { quarries } = useQuarry();
+  const { quarries, selectedQuarryIds, selectedQuarries } = useQuarry();
   const { records, addLine, updateLine, removeLine, updateRecordMeta, replaceRecords, reset } = useMaint();
   const { period } = usePeriod();
 
   const [tab, setTab] = useState<"log" | "analysis">("log");
-  const [fQuarry, setFQuarry] = useState("all");
   const [fUnit, setFUnit] = useState("all");
   const [fType, setFType] = useState("all");
   const [adding, setAdding] = useState(false);
@@ -85,7 +85,7 @@ export default function MaintenancePage() {
 
   const windowMonths = useMemo(() => {
     const all = [...new Set(records.map((r) => r.month))];
-    return new Set(monthsInPeriod(all, period));
+    return new Set(resolveMonths(all, period));
   }, [records, period]);
 
   // Flatten records → lines, apply filters (including the global period window)
@@ -94,7 +94,7 @@ export default function MaintenancePage() {
     for (const r of records) {
       if (!windowMonths.has(r.month)) continue;
       const u = unitsById.get(r.unitId);
-      if (fQuarry !== "all" && u?.quarryId !== fQuarry) continue;
+      if (u && !selectedQuarryIds.includes(u.quarryId)) continue;
       if (fUnit !== "all" && r.unitId !== fUnit) continue;
       for (const l of r.lines) {
         if (fType !== "all" && l.type !== fType) continue;
@@ -102,34 +102,50 @@ export default function MaintenancePage() {
       }
     }
     return out.sort((a, b) => b.month.localeCompare(a.month) || a.unitId.localeCompare(b.unitId));
-  }, [records, unitsById, fQuarry, fUnit, fType, windowMonths]);
+  }, [records, unitsById, selectedQuarryIds, fUnit, fType, windowMonths]);
+
+  type LogRow = (typeof rows)[number];
+  const logAccessors = useMemo(
+    () => ({
+      month: (r: LogRow) => r.month,
+      unit: (r: LogRow) => label(r.unitId),
+      subsystem: (r: LogRow) => r.subsystem,
+      type: (r: LogRow) => r.type,
+      cost: (r: LogRow) => r.cost,
+      laborHours: (r: LogRow) => r.laborHours,
+      hours: (r: LogRow) => r.hours,
+    }),
+    // label depends on units/models which are stable for a render set
+    [unitsById, modelById] // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const { sorted: sortedRows, state: logState, toggle: logToggle } = useSort(rows, logAccessors, { key: "month", dir: "desc" });
 
   const perHourTrend = useMemo(() => {
-    const months = monthsInPeriod([...new Set(records.map((r) => r.month))], period);
+    const months = resolveMonths([...new Set(records.map((r) => r.month))], period);
     return months.map((month) => {
       let cost = 0, hours = 0;
       const seen = new Set<string>();
       for (const r of records) {
         if (r.month !== month) continue;
         const u = unitsById.get(r.unitId);
-        if (fQuarry !== "all" && u?.quarryId !== fQuarry) continue;
+        if (u && !selectedQuarryIds.includes(u.quarryId)) continue;
         if (fUnit !== "all" && r.unitId !== fUnit) continue;
         for (const l of r.lines) cost += l.cost;
         if (!seen.has(r.unitId)) { hours += r.hours; seen.add(r.unitId); }
       }
       return { month, value: hours > 0 ? cost / hours : 0 };
     });
-  }, [records, period, unitsById, fQuarry, fUnit]);
+  }, [records, period, unitsById, selectedQuarryIds, fUnit]);
 
   const totals = useMemo(() => {
     const cost = rows.reduce((s, r) => s + r.cost, 0);
-    const um = unitMaint(records.filter((r) => fQuarry === "all" || unitsById.get(r.unitId)?.quarryId === fQuarry));
+    const um = unitMaint(records.filter((r) => { const u = unitsById.get(r.unitId); return !u || selectedQuarryIds.includes(u.quarryId); }));
     let totalCost = 0, totalHours = 0, sched = 0;
     for (const u of um.values()) { totalCost += u.totalCost; totalHours += u.totalHours; sched += u.byType.preventive; }
     const top = [...um.values()].flatMap((u) => u.bySubsystem).reduce((m, s) => m.set(s.subsystem, (m.get(s.subsystem) ?? 0) + s.cost), new Map<string, number>());
     const topSub = [...top.entries()].sort((a, b) => b[1] - a[1])[0];
     return { filteredCost: cost, perHour: totalHours > 0 ? totalCost / totalHours : 0, scheduledPct: totalCost > 0 ? sched / totalCost : 0, topSub: topSub?.[0] ?? "—" };
-  }, [rows, records, unitsById, fQuarry]);
+  }, [rows, records, unitsById, selectedQuarryIds]);
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -202,7 +218,7 @@ export default function MaintenancePage() {
         <Segmented value={tab} onChange={(v) => setTab(v as "log" | "analysis")} options={[{ value: "log", label: "Log" }, { value: "analysis", label: "Analysis" }]} />
       </div>
 
-      {tab === "analysis" && <MaintAnalysis units={units} records={records} classById={classById} params={params} quarries={quarries} />}
+      {tab === "analysis" && <MaintAnalysis units={units.filter((u) => selectedQuarryIds.includes(u.quarryId))} records={records} classById={classById} params={params} quarries={selectedQuarries} />}
 
       {tab === "log" && (
         <>
@@ -218,8 +234,7 @@ export default function MaintenancePage() {
           </div>
 
           <div className="mb-4 flex flex-wrap items-center gap-2">
-            <Select value={fQuarry} onChange={setFQuarry} options={[{ value: "all", label: "All quarries" }, ...quarries.map((q) => ({ value: q.id, label: q.name }))]} />
-            <Select value={fUnit} onChange={setFUnit} options={[{ value: "all", label: "All units" }, ...units.filter((u) => fQuarry === "all" || u.quarryId === fQuarry).map((u) => ({ value: u.id, label: u.unitNo }))]} />
+            <Select value={fUnit} onChange={setFUnit} options={[{ value: "all", label: "All units" }, ...units.filter((u) => selectedQuarryIds.includes(u.quarryId)).map((u) => ({ value: u.id, label: u.unitNo }))]} />
             <Select value={fType} onChange={setFType} options={[{ value: "all", label: "All types" }, ...TYPE_OPTIONS]} />
             <span className="mx-1 h-5 w-px bg-line" />
             <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,text/csv" onChange={onFile} className="hidden" />
@@ -236,18 +251,18 @@ export default function MaintenancePage() {
               <table className="w-full min-w-[920px] text-sm">
                 <thead>
                   <tr className="border-b border-line text-left text-[11px] uppercase tracking-[0.1em] text-inkfaint">
-                    <th className="px-4 py-3 font-semibold">Month</th>
-                    <th className="px-4 py-3 font-semibold">Unit</th>
-                    <th className="px-4 py-3 font-semibold">Subsystem</th>
-                    <th className="px-4 py-3 font-semibold">Type</th>
-                    <th className="px-4 py-3 text-right font-semibold">Cost</th>
-                    <th className="px-4 py-3 text-right font-semibold">Labor h</th>
-                    <th className="px-4 py-3 text-right font-semibold">Hrs (mo) <InfoTip title="Monthly hours" formula="hours the unit ran that month (drives $/hr)" align="right" /></th>
+                    <SortHeader label="Month" sortKey="month" state={logState} onSort={logToggle} className="px-4 py-3" />
+                    <SortHeader label="Unit" sortKey="unit" state={logState} onSort={logToggle} className="px-4 py-3" />
+                    <SortHeader label="Subsystem" sortKey="subsystem" state={logState} onSort={logToggle} className="px-4 py-3" />
+                    <SortHeader label="Type" sortKey="type" state={logState} onSort={logToggle} className="px-4 py-3" />
+                    <SortHeader label="Cost" sortKey="cost" state={logState} onSort={logToggle} align="right" className="px-4 py-3" />
+                    <SortHeader label="Labor h" sortKey="laborHours" state={logState} onSort={logToggle} align="right" className="px-4 py-3" />
+                    <SortHeader label="Hrs (mo)" sortKey="hours" state={logState} onSort={logToggle} align="right" className="px-4 py-3"><InfoTip title="Monthly hours" formula="hours the unit ran that month (drives $/hr)" align="right" /></SortHeader>
                     <th className="px-4 py-3" />
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => (
+                  {sortedRows.map((r) => (
                     <tr key={r.lineId} className="border-b border-line/60 last:border-0 hover:bg-panel/50">
                       <td className="px-4 py-2 tabular text-inksoft">{r.month}</td>
                       <td className="px-4 py-2 text-ink">{label(r.unitId)}</td>

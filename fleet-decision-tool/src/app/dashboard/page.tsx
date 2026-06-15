@@ -22,17 +22,18 @@ import { useQuarry } from "@/lib/quarryStore";
 import { useShiftLog } from "@/lib/shiftStore";
 import { useMaint } from "@/lib/maintStore";
 import { useFleetHistory } from "@/lib/fleetHistoryStore";
-import { usePeriod, monthsInPeriod } from "@/lib/periodStore";
+import { usePeriod, resolveMonths } from "@/lib/periodStore";
 import { kpiHistory, KPI_DEFS, aggKpi } from "@/lib/history";
-import { Card, PageHeader, SectionTitle, Select, StatCard } from "@/components/ui";
+import { Card, PageHeader, SectionTitle, StatCard } from "@/components/ui";
 import { MiniTrend } from "@/components/MiniTrend";
+import { SortHeader, type SortState } from "@/components/Sortable";
 import { InfoTip } from "@/components/InfoTip";
 
 export default function DashboardPage() {
   const { params } = useParams();
   const { classById } = useCatalog();
   const { units } = useFleet();
-  const { quarries } = useQuarry();
+  const { quarries, selectedQuarries } = useQuarry();
   const { records } = useShiftLog();
   const { records: maintRecords } = useMaint();
   const { months: fleetMonths } = useFleetHistory();
@@ -45,18 +46,6 @@ export default function DashboardPage() {
     () => (params.useActualAvailability ? actualAvailabilityByUnit(maintRecords) : undefined),
     [params.useActualAvailability, maintRecords]
   );
-  const [scope, setScope] = useState<string>("all");
-
-  const regions = useMemo(() => [...new Set(quarries.map((q) => q.region))], [quarries]);
-
-  const scopeOptions = useMemo(
-    () => [
-      { value: "all", label: "All quarries" },
-      ...regions.map((rg) => ({ value: `region:${rg}`, label: `Región ${rg}` })),
-      ...quarries.map((q) => ({ value: `quarry:${q.id}`, label: `${q.name} (${q.region})` })),
-    ],
-    [regions, quarries]
-  );
 
   const maintByQuarry = useMemo(() => {
     const quarryByUnit = new Map(units.map((u) => [u.id, u.quarryId]));
@@ -64,11 +53,8 @@ export default function DashboardPage() {
     return quarryMaint(maintRecords, quarryByUnit, productionByQuarry);
   }, [maintRecords, units, quarries]);
 
-  const includedQuarries = useMemo(() => {
-    if (scope.startsWith("region:")) return quarries.filter((q) => q.region === scope.slice(7));
-    if (scope.startsWith("quarry:")) return quarries.filter((q) => q.id === scope.slice(7));
-    return quarries;
-  }, [scope, quarries]);
+  // Scoped by the global quarry multi-select in the top bar.
+  const includedQuarries = selectedQuarries;
 
   const metrics = useMemo(
     () => includedQuarries.map((q) => quarryMetrics(q, units, records, classById, params, maintByUnit, availByUnit)),
@@ -126,7 +112,7 @@ export default function DashboardPage() {
   }, [metrics, maintByQuarry]);
 
   const trendMonths = useMemo(
-    () => monthsInPeriod([...new Set(fleetMonths.map((m) => m.month))], period),
+    () => resolveMonths([...new Set(fleetMonths.map((m) => m.month))], period),
     [fleetMonths, period]
   );
   const trends = useMemo(() => {
@@ -138,12 +124,40 @@ export default function DashboardPage() {
     return { operating: point("operating"), attainment: point("attainment"), maintPerTon: point("maintPerTon") };
   }, [trendMonths, includedQuarries, units, fleetMonths, records, maintRecords, classById, params]);
 
+  // Sort the leaf rows within each region group on header click.
+  const [sort, setSort] = useState<SortState>({ key: null, dir: "asc" });
+  const toggle = (k: string) =>
+    setSort((s) => (s.key === k ? { key: k, dir: s.dir === "asc" ? "desc" : "asc" } : { key: k, dir: "asc" }));
+  const leafAcc: Record<string, (m: QuarryMetrics) => number | string> = {
+    name: (m) => m.quarry.name,
+    region: (m) => m.quarry.region,
+    systemTph: (m) => m.systemTph,
+    attainment: (m) => m.attainment,
+    costPerTon: (m) => m.costPerTon,
+    maintPerTon: (m) => maintByQuarry.get(m.quarry.id)?.perTon ?? 0,
+    operating: (m) => m.operating,
+    excess: (m) => m.excess,
+    lossesUsd: (m) => m.lossesUsd,
+  };
+  const sortLeaves = (list: QuarryMetrics[]) => {
+    const acc = sort.key ? leafAcc[sort.key] : undefined;
+    if (!acc) return list;
+    const dir = sort.dir === "asc" ? 1 : -1;
+    return [...list].sort((a, b) => {
+      const av = acc(a);
+      const bv = acc(b);
+      return typeof av === "number" && typeof bv === "number"
+        ? (av - bv) * dir
+        : String(av).localeCompare(String(bv), undefined, { numeric: true }) * dir;
+    });
+  };
+
   return (
     <div>
       <PageHeader
         title="Executive Dashboard"
-        subtitle="The whole aggregates operation on one screen — filter by region or quarry, or see it all rolled up."
-        actions={<Select value={scope} onChange={setScope} options={scopeOptions} />}
+        subtitle="The whole aggregates operation on one screen — scope it with the quarry and period filters in the top bar."
+        actions={<span className="text-xs text-inkfaint">{includedQuarries.length} of {quarries.length} quarries</span>}
       />
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
@@ -172,15 +186,15 @@ export default function DashboardPage() {
           <table className="w-full min-w-[860px] text-sm">
             <thead>
               <tr className="border-b border-line text-left text-[11px] uppercase tracking-[0.1em] text-inkfaint">
-                <th className="px-5 py-3 font-semibold">Quarry</th>
-                <th className="px-3 py-3 font-semibold">Region</th>
-                <th className="px-3 py-3 text-right font-semibold">System tph</th>
-                <th className="px-3 py-3 text-right font-semibold">Attain.</th>
-                <th className="px-3 py-3 text-right font-semibold">Cost/ton</th>
-                <th className="px-3 py-3 text-right font-semibold">Maint $/t <InfoTip title="Maintenance $/ton" formula="annualized logged maintenance ÷ quarry production" align="right" /></th>
-                <th className="px-3 py-3 text-right font-semibold">Fleet OPEX</th>
-                <th className="px-3 py-3 text-right font-semibold">Excess OPEX</th>
-                <th className="px-3 py-3 text-right font-semibold">Losses/yr</th>
+                <SortHeader label="Quarry" sortKey="name" state={sort} onSort={toggle} className="px-5 py-3" />
+                <SortHeader label="Region" sortKey="region" state={sort} onSort={toggle} className="px-3 py-3" />
+                <SortHeader label="System tph" sortKey="systemTph" state={sort} onSort={toggle} align="right" className="px-3 py-3" />
+                <SortHeader label="Attain." sortKey="attainment" state={sort} onSort={toggle} align="right" className="px-3 py-3" />
+                <SortHeader label="Cost/ton" sortKey="costPerTon" state={sort} onSort={toggle} align="right" className="px-3 py-3" />
+                <SortHeader label="Maint $/t" sortKey="maintPerTon" state={sort} onSort={toggle} align="right" className="px-3 py-3"><InfoTip title="Maintenance $/ton" formula="annualized logged maintenance ÷ quarry production" align="right" /></SortHeader>
+                <SortHeader label="Fleet OPEX" sortKey="operating" state={sort} onSort={toggle} align="right" className="px-3 py-3" />
+                <SortHeader label="Excess OPEX" sortKey="excess" state={sort} onSort={toggle} align="right" className="px-3 py-3" />
+                <SortHeader label="Losses/yr" sortKey="lossesUsd" state={sort} onSort={toggle} align="right" className="px-3 py-3" />
               </tr>
             </thead>
             <tbody>
@@ -196,7 +210,7 @@ export default function DashboardPage() {
                     <td className="px-3 py-1.5 text-right tabular">{usdCompact(Math.max(0, rg.excess))}</td>
                     <td className="px-3 py-1.5 text-right tabular">{usdCompact(rg.losses)}</td>
                   </tr>
-                  {rg.list.map((m) => (
+                  {sortLeaves(rg.list).map((m) => (
                     <tr key={m.quarry.id} className="border-b border-line/60 hover:bg-panel/50">
                       <td className="px-5 py-2 pl-8 font-medium text-ink">{m.quarry.name}</td>
                       <td className="px-3 py-2 text-inksoft">{m.quarry.region}</td>
