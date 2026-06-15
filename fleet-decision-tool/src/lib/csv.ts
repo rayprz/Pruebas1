@@ -24,7 +24,7 @@ export function unitsToCsv(units: FleetUnit[]): string {
 }
 
 /** Minimal CSV line splitter that respects double-quoted fields. */
-function splitCsvLine(line: string): string[] {
+export function splitCsvLine(line: string): string[] {
   const out: string[] = [];
   let cur = "";
   let inQuotes = false;

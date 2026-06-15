@@ -19,6 +19,7 @@ import { useQuarry } from "@/lib/quarryStore";
 import type { Category, QuarryFront } from "@/lib/types";
 import { ModuleIntro } from "@/components/ModuleIntro";
 import { InfoTip } from "@/components/InfoTip";
+import { QuarryActuals } from "@/components/QuarryActuals";
 import { IconPlus, IconTrash } from "@/components/Icons";
 import {
   Button,
@@ -26,6 +27,7 @@ import {
   NumberField,
   PageHeader,
   SectionTitle,
+  Segmented,
   Select,
   StatCard,
   TextInput,
@@ -53,6 +55,8 @@ export default function QuarryPage() {
   const q = useQuarry();
   const { config } = q;
 
+  const [tab, setTab] = useState<"model" | "actuals">("model");
+
   const r = useMemo(() => computeQuarry(config, classById, params), [config, classById, params]);
 
   const loaderOptions = classes.filter((c) => LOADER_CATS.includes(c.category)).map((c) => ({ value: c.id, label: c.name }));
@@ -79,6 +83,23 @@ export default function QuarryPage() {
         formulas={FORMULAS}
       />
 
+      <div className="mb-5">
+        <Segmented
+          value={tab}
+          onChange={(v) => setTab(v as "model" | "actuals")}
+          options={[
+            { value: "model", label: "Daily model" },
+            { value: "actuals", label: "Shift actuals" },
+          ]}
+        />
+      </div>
+
+      {tab === "actuals" && (
+        <QuarryActuals modelTph={r.crusherThroughputTph} config={config} />
+      )}
+
+      {tab === "model" && (
+        <>
       {/* Headline KPIs */}
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
         <StatCard
@@ -306,10 +327,12 @@ export default function QuarryPage() {
 
       <p className="mt-4 text-xs text-inkfaint">
         Simplified theory-of-constraints model for daily decisions. Every number
-        has its formula in the “i” icons and the intro panel. Phase 2 will let you
-        log real shift data (actual tons, downtime, GPS cycle times) to compare
-        actual vs this model by shift and trend.
+        has its formula in the “i” icons and the intro panel. Switch to{" "}
+        <span className="font-medium text-ink">Shift actuals</span> to log real
+        production and compare it against this model by shift and over time.
       </p>
+      </>
+      )}
     </div>
   );
 }

@@ -99,7 +99,21 @@ export interface Site {
   truckClassId: string;
 }
 
-/** A saleable product (gradation) coming off the plant. */
+/** A logged production shift, for actual-vs-model tracking. */
+export interface ShiftRecord {
+  id: string;
+  /** ISO date yyyy-mm-dd */
+  date: string;
+  /** Shift label, e.g. "A" / "B" / "Night" */
+  shift: string;
+  scheduledHours: number;
+  downtimeHours: number;
+  /** Saleable tons produced (crusher output) this shift */
+  actualTons: number;
+  /** Primary downtime cause, grouped for the Pareto */
+  downtimeReason: string;
+  note?: string;
+}
 export interface QuarryProduct {
   id: string;
   name: string;
