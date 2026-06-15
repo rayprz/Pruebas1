@@ -10,7 +10,7 @@ import {
 } from "react";
 import type { QuarryConfig, QuarryFront, QuarryProduct } from "./types";
 
-const KEY = "fleet-tool-quarry-v3";
+const KEY = "fleet-tool-quarry-v4";
 
 const DEFAULT_CONFIG: QuarryConfig = {
   shiftsPerDay: 2,
@@ -35,6 +35,7 @@ const DEFAULT_CONFIG: QuarryConfig = {
       name: "North Limestone",
       material: "Limestone",
       destination: "crusher",
+      loaderUnitId: "ld01",
       loaderClassId: "pl-992",
       loaderBucketTons: 18,
       loaderCycleSec: 36,
@@ -51,6 +52,7 @@ const DEFAULT_CONFIG: QuarryConfig = {
       name: "South Limestone",
       material: "Limestone",
       destination: "crusher",
+      loaderUnitId: "ld31",
       loaderClassId: "pl-988",
       loaderBucketTons: 12,
       loaderCycleSec: 33,
@@ -67,6 +69,7 @@ const DEFAULT_CONFIG: QuarryConfig = {
       name: "Clay Pit",
       material: "Clay",
       destination: "stockpile",
+      loaderUnitId: "ex21",
       loaderClassId: "ex-390",
       loaderBucketTons: 7,
       loaderCycleSec: 30,
@@ -83,6 +86,7 @@ const DEFAULT_CONFIG: QuarryConfig = {
       name: "Overburden",
       material: "Waste",
       destination: "stockpile",
+      loaderUnitId: "ld21",
       loaderClassId: "wl-980",
       loaderBucketTons: 8,
       loaderCycleSec: 30,
@@ -114,6 +118,9 @@ interface QuarryStore {
   /** Assign a fleet truck unit to a front (removing it from any other front). */
   assignTruck: (frontId: string, unitId: string) => void;
   unassignTruck: (frontId: string, unitId: string) => void;
+  /** Assign a fleet loader unit to a front (removing it from any other front). */
+  assignLoader: (frontId: string, unitId: string) => void;
+  unassignLoader: (frontId: string) => void;
   updateProduct: (id: string, patch: Partial<QuarryProduct>) => void;
   reset: () => void;
 }
@@ -193,6 +200,17 @@ export function QuarryProvider({ children }: { children: ReactNode }) {
         }),
       unassignTruck: (frontId, unitId) =>
         mapFront(frontId, (f) => ({ ...f, truckUnitIds: f.truckUnitIds.filter((id) => id !== unitId) })),
+      assignLoader: (frontId, unitId) =>
+        // clear this loader from any other front, then set it on the target
+        persist({
+          ...config,
+          fronts: config.fronts.map((f) => {
+            if (f.id === frontId) return { ...f, loaderUnitId: unitId };
+            return f.loaderUnitId === unitId ? { ...f, loaderUnitId: undefined } : f;
+          }),
+        }),
+      unassignLoader: (frontId) =>
+        mapFront(frontId, (f) => ({ ...f, loaderUnitId: undefined })),
       updateProduct: (id, patch) =>
         persist({
           ...config,

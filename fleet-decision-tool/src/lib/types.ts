@@ -145,6 +145,10 @@ export interface QuarryFront {
   /** Where this front delivers: the shared crusher, or straight to stockpile */
   destination: "crusher" | "stockpile";
   // Loading
+  /** Assigned fleet loader unit (FleetUnit id). When set, the loader's class,
+   *  brand and availability come from the unit; falls back to loaderClassId
+   *  / loaderAvailability when empty. */
+  loaderUnitId?: string;
   loaderClassId: string;
   loaderBucketTons: number;
   loaderCycleSec: number;

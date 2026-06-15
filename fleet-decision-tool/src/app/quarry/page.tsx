@@ -85,6 +85,22 @@ export default function QuarryPage() {
   }, [config.fronts]);
   const unassignedTrucks = truckUnits.filter((u) => !assignedFrontByUnit.has(u.id));
 
+  // Loaders from My Fleet
+  const loaderUnits = useMemo(
+    () =>
+      units.filter((u) => {
+        const c = classById.get(u.classId);
+        return c && LOADER_CATS.includes(c.category);
+      }),
+    [units, classById]
+  );
+  const assignedLoaderFrontByUnit = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const f of config.fronts) if (f.loaderUnitId) map.set(f.loaderUnitId, f.name);
+    return map;
+  }, [config.fronts]);
+  const unassignedLoaders = loaderUnits.filter((u) => !assignedLoaderFrontByUnit.has(u.id));
+
   return (
     <div>
       <PageHeader
@@ -194,10 +210,20 @@ export default function QuarryPage() {
         <SectionTitle>Fronts &amp; fleet</SectionTitle>
         <Button onClick={q.addFront}><IconPlus width={16} height={16} /> Add front</Button>
       </div>
-      {unassignedTrucks.length > 0 && (
-        <div className="mb-3 rounded-xl border border-line bg-accentsoft/40 px-4 py-2 text-sm text-inksoft">
-          <span className="font-medium text-accentink">{unassignedTrucks.length} truck(s) unassigned:</span>{" "}
-          {unassignedTrucks.map((u) => u.unitNo).join(", ")} — assign them to a front below to put them to work.
+      {(unassignedTrucks.length > 0 || unassignedLoaders.length > 0) && (
+        <div className="mb-3 space-y-1 rounded-xl border border-line bg-accentsoft/40 px-4 py-2 text-sm text-inksoft">
+          {unassignedTrucks.length > 0 && (
+            <p>
+              <span className="font-medium text-accentink">{unassignedTrucks.length} truck(s) spare:</span>{" "}
+              {unassignedTrucks.map((u) => u.unitNo).join(", ")} — assign them to a front below.
+            </p>
+          )}
+          {unassignedLoaders.length > 0 && (
+            <p>
+              <span className="font-medium text-accentink">{unassignedLoaders.length} loader(s) spare:</span>{" "}
+              {unassignedLoaders.map((u) => u.unitNo).join(", ")}.
+            </p>
+          )}
         </div>
       )}
       <div className="space-y-3">
@@ -209,6 +235,8 @@ export default function QuarryPage() {
               front={front}
               res={res}
               loaderOptions={loaderOptions}
+              loaderUnits={loaderUnits}
+              assignedLoaderFrontByUnit={assignedLoaderFrontByUnit}
               truckUnits={truckUnits}
               assignedFrontByUnit={assignedFrontByUnit}
               q={q}
@@ -503,6 +531,8 @@ function FrontEditor({
   front,
   res,
   loaderOptions,
+  loaderUnits,
+  assignedLoaderFrontByUnit,
   truckUnits,
   assignedFrontByUnit,
   q,
@@ -510,6 +540,8 @@ function FrontEditor({
   front: QuarryFront;
   res: FrontResult;
   loaderOptions: { value: string; label: string }[];
+  loaderUnits: FleetUnit[];
+  assignedLoaderFrontByUnit: Map<string, string>;
   truckUnits: FleetUnit[];
   assignedFrontByUnit: Map<string, string>;
   q: ReturnType<typeof useQuarry>;
@@ -545,13 +577,41 @@ function FrontEditor({
                   options={[{ value: "crusher", label: "Crusher" }, { value: "stockpile", label: "Stockpile" }]} className="w-full" /></label>
             </div>
             <div className="space-y-2">
-              <p className="flex items-center text-[11px] font-semibold uppercase tracking-[0.1em] text-accentink">Loader <InfoTip title="Loader feed (tph)" formula="bucket × fill × 3600 ÷ cycle × avail" align="left" /></p>
-              <label className="space-y-1 text-sm"><span className="text-inksoft">Class</span>
-                <Select value={front.loaderClassId} onChange={(v) => q.updateFront(front.id, { loaderClassId: v })} options={loaderOptions} className="w-full" /></label>
+              <p className="flex items-center text-[11px] font-semibold uppercase tracking-[0.1em] text-accentink">
+                Loader <InfoTip title="Loader feed (tph)" formula="bucket × fill × 3600 ÷ cycle × avail" align="left">Assign a fleet loader — class, brand and availability come from the unit. Bucket / cycle / fill are tunable per face.</InfoTip>
+              </p>
+              <label className="space-y-1 text-sm"><span className="text-inksoft">Loader unit (My Fleet)</span>
+                <select
+                  value={front.loaderUnitId ?? ""}
+                  onChange={(e) => (e.target.value ? q.assignLoader(front.id, e.target.value) : q.unassignLoader(front.id))}
+                  className="w-full rounded-lg border border-line bg-card px-2.5 py-1.5 text-sm text-ink focus:border-accent focus:outline-none"
+                >
+                  <option value="">— Config (no fleet unit)</option>
+                  {loaderUnits.map((u) => {
+                    const at = assignedLoaderFrontByUnit.get(u.id);
+                    return (
+                      <option key={u.id} value={u.id}>
+                        {u.unitNo}{at && at !== front.name ? ` (move from ${at})` : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+              </label>
+              {front.loaderUnitId ? (
+                <p className="text-xs text-inksoft">
+                  {res.loaderLabel}
+                  {!res.loaderActive && <span className="text-danger"> · down → front stops</span>}
+                </p>
+              ) : (
+                <label className="space-y-1 text-sm"><span className="text-inksoft">Class (fallback)</span>
+                  <Select value={front.loaderClassId} onChange={(v) => q.updateFront(front.id, { loaderClassId: v })} options={loaderOptions} className="w-full" /></label>
+              )}
               <NumberField label="Bucket" suffix="t" value={front.loaderBucketTons} onChange={(v) => q.updateFront(front.id, { loaderBucketTons: v })} />
               <NumberField label="Cycle" suffix="sec" value={front.loaderCycleSec} onChange={(v) => q.updateFront(front.id, { loaderCycleSec: v })} />
               <NumberField label="Fill" suffix="×" step={0.05} value={front.bucketFillFactor} onChange={(v) => q.updateFront(front.id, { bucketFillFactor: v })} />
-              <NumberField label="Availability" suffix="×" step={0.01} value={front.loaderAvailability} onChange={(v) => q.updateFront(front.id, { loaderAvailability: v })} />
+              {!front.loaderUnitId && (
+                <NumberField label="Availability" suffix="×" step={0.01} value={front.loaderAvailability} onChange={(v) => q.updateFront(front.id, { loaderAvailability: v })} />
+              )}
               <p className="text-xs text-inkfaint">Loader feed: <span className="tabular text-ink">{tph(res.loaderTph)} tph</span></p>
             </div>
             <div className="space-y-2">

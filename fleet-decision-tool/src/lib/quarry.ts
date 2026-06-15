@@ -51,6 +51,9 @@ export interface FrontResult {
   bottleneck: FrontBottleneck;
   /** haul ÷ loader; >1 over-trucked, <1 under-trucked */
   matchFactor: number;
+  /** Loader display label (assigned unit, or "config" when none) */
+  loaderLabel: string;
+  loaderActive: boolean;
   truckCount: number;
   activeTruckCount: number;
   units: TruckUnitResult[];
@@ -151,9 +154,19 @@ function computeFront(
   unitsById: Map<string, FleetUnit>
 ): FrontResult {
   const bucketEff = front.loaderBucketTons * front.bucketFillFactor;
+  const loaderUnit = front.loaderUnitId ? unitsById.get(front.loaderUnitId) : undefined;
+  const loaderActive = loaderUnit ? loaderUnit.status === "active" : true;
+  const loaderAvail = loaderUnit
+    ? loaderActive
+      ? loaderUnit.availability
+      : 0
+    : front.loaderAvailability;
+  const loaderLabel = loaderUnit
+    ? `${loaderUnit.unitNo} · ${modelLabel(loaderUnit.modelId)}`
+    : "config";
   const loaderTph =
     front.loaderCycleSec > 0
-      ? (bucketEff * 3600) / front.loaderCycleSec * front.loaderAvailability
+      ? (bucketEff * 3600) / front.loaderCycleSec * loaderAvail
       : 0;
 
   const haulLoadedSec =
@@ -223,6 +236,8 @@ function computeFront(
     delivered,
     bottleneck,
     matchFactor,
+    loaderLabel,
+    loaderActive,
     truckCount,
     activeTruckCount,
     units,
@@ -363,8 +378,10 @@ export function computeQuarry(
   let haulCostYr = 0;
   let fuelGalYr = 0;
   for (const f of cfg.fronts) {
-    loadCostYr += classOpHr(f.loaderClassId, classById, params) * productiveHoursYear;
-    fuelGalYr += classFuel(f.loaderClassId, classById) * productiveHoursYear;
+    const loaderClassId =
+      (f.loaderUnitId ? unitsById.get(f.loaderUnitId)?.classId : undefined) ?? f.loaderClassId;
+    loadCostYr += classOpHr(loaderClassId, classById, params) * productiveHoursYear;
+    fuelGalYr += classFuel(loaderClassId, classById) * productiveHoursYear;
     for (const unitId of f.truckUnitIds) {
       const unit = unitsById.get(unitId);
       if (!unit) continue;
