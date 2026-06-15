@@ -15,7 +15,7 @@ const UNITS_KEY = "fleet-tool-units-v2";
 export const BASE_YEAR = 2026;
 export const CAPEX_HORIZON = 6;
 
-const SEED_UNITS: FleetUnit[] = [
+export const SEED_UNITS: FleetUnit[] = [
   // ===== Tepeaca =====
   { id: "ld01", unitNo: "LD-01", classId: "pl-992", modelId: "cat-992k", year: 2018, currentHours: 33000, annualHours: 4500, availability: 0.88, quarryId: "q-tepeaca", status: "active" },
   { id: "ld02", unitNo: "LD-02", classId: "pl-992", modelId: "km-wa800", year: 2021, currentHours: 16500, annualHours: 4500, availability: 0.9, quarryId: "q-tepeaca", status: "active" },

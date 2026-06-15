@@ -66,6 +66,18 @@ export interface EquivalenceClass {
   overhaulCostPct?: number;
 }
 
+/** A unit's state at the end of a month — the time-stamped base data that lets
+ *  the snapshot KPIs (cost, CAPEX, quarry model) be recomputed per month. */
+export interface FleetMonth {
+  unitId: string;
+  /** "YYYY-MM" */
+  month: string;
+  /** Cumulative operating hours (meter) at end of month */
+  meterHours: number;
+  availability: number;
+  status: "active" | "standby" | "down";
+}
+
 /** A single physical machine the customer owns or evaluates. */
 export interface FleetUnit {
   id: string;

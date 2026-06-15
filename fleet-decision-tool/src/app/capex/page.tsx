@@ -16,7 +16,12 @@ import { MODELS } from "@/data/catalog";
 import { BASE_YEAR, CAPEX_HORIZON, useFleet } from "@/lib/fleetStore";
 import { useCatalog } from "@/lib/catalogStore";
 import { unitCapexEvents, usd, usdCompact, type CapexEvent } from "@/lib/engine";
+import { useFleetHistory } from "@/lib/fleetHistoryStore";
+import { usePeriod, monthsInPeriod } from "@/lib/periodStore";
+import { unitAt } from "@/lib/history";
+import type { FleetMonth } from "@/lib/types";
 import { BrandBadge } from "@/components/BrandBadge";
+import { MiniTrend } from "@/components/MiniTrend";
 import { ModuleIntro } from "@/components/ModuleIntro";
 import { InfoTip } from "@/components/InfoTip";
 import { Card, PageHeader, SectionTitle, StatCard } from "@/components/ui";
@@ -24,8 +29,24 @@ import { Card, PageHeader, SectionTitle, StatCard } from "@/components/ui";
 export default function CapexPage() {
   const { units } = useFleet();
   const { classById } = useCatalog();
+  const { months: fleetMonths } = useFleetHistory();
+  const { period } = usePeriod();
 
   const modelById = useMemo(() => new Map(MODELS.map((m) => [m.id, m])), []);
+
+  const capexTrend = useMemo(() => {
+    const months = monthsInPeriod([...new Set(fleetMonths.map((m) => m.month))], period);
+    const fmByKey = new Map<string, FleetMonth>(fleetMonths.map((m) => [`${m.unitId}|${m.month}`, m]));
+    return months.map((month) => {
+      const value = units.reduce((s, u) => {
+        const cls = classById.get(u.classId);
+        if (!cls) return s;
+        const hu = unitAt(u, fmByKey, month);
+        return s + unitCapexEvents(cls, hu, BASE_YEAR, CAPEX_HORIZON).reduce((a, e) => a + e.cost, 0);
+      }, 0);
+      return { month, value };
+    });
+  }, [fleetMonths, period, units, classById]);
 
   const events = useMemo(() => {
     const all: CapexEvent[] = [];
@@ -94,6 +115,10 @@ export default function CapexPage() {
         <StatCard label="Overhauls" value={usdCompact(totals.overhaul)} sub={`${events.filter((e) => e.type === "overhaul").length} events`} />
         <StatCard label="Replacements" value={usdCompact(totals.replacement)} sub={`${events.filter((e) => e.type === "replacement").length} units`} />
         <StatCard label="Peak year" value={totals.peak.year} sub={usd(totals.peak.total, 0)} tone="gold" />
+      </div>
+
+      <div className="mb-6 grid grid-cols-1 sm:max-w-sm">
+        <MiniTrend label={`Projected ${CAPEX_HORIZON}-yr CAPEX`} data={capexTrend} fmt={usdCompact} color="#c08a44" goodWhenUp={false} />
       </div>
 
       <Card className="mb-6 p-4">

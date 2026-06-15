@@ -11,11 +11,13 @@ import { useCatalog } from "@/lib/catalogStore";
 import { useFleet } from "@/lib/fleetStore";
 import { useQuarry } from "@/lib/quarryStore";
 import { useMaint, SUBSYSTEMS } from "@/lib/maintStore";
+import { usePeriod, monthsInPeriod } from "@/lib/periodStore";
 import type { MaintType } from "@/lib/types";
 import { ModuleIntro } from "@/components/ModuleIntro";
 import { InfoTip } from "@/components/InfoTip";
 import { IconPlus, IconTrash } from "@/components/Icons";
 import { MaintAnalysis } from "@/components/MaintAnalysis";
+import { MiniTrend } from "@/components/MiniTrend";
 import {
   Button,
   Card,
@@ -58,6 +60,7 @@ export default function MaintenancePage() {
   const { units } = useFleet();
   const { quarries } = useQuarry();
   const { records, addLine, updateLine, removeLine, updateRecordMeta, replaceRecords, reset } = useMaint();
+  const { period } = usePeriod();
 
   const [tab, setTab] = useState<"log" | "analysis">("log");
   const [fQuarry, setFQuarry] = useState("all");
@@ -80,10 +83,16 @@ export default function MaintenancePage() {
     return `${u.unitNo} · ${m ? `${m.brand} ${m.model}` : u.classId}`;
   };
 
-  // Flatten records → lines, apply filters
+  const windowMonths = useMemo(() => {
+    const all = [...new Set(records.map((r) => r.month))];
+    return new Set(monthsInPeriod(all, period));
+  }, [records, period]);
+
+  // Flatten records → lines, apply filters (including the global period window)
   const rows = useMemo(() => {
     const out: { recId: string; unitId: string; month: string; hours: number; lineId: string; subsystem: string; type: MaintType; cost: number; laborHours?: number }[] = [];
     for (const r of records) {
+      if (!windowMonths.has(r.month)) continue;
       const u = unitsById.get(r.unitId);
       if (fQuarry !== "all" && u?.quarryId !== fQuarry) continue;
       if (fUnit !== "all" && r.unitId !== fUnit) continue;
@@ -93,7 +102,24 @@ export default function MaintenancePage() {
       }
     }
     return out.sort((a, b) => b.month.localeCompare(a.month) || a.unitId.localeCompare(b.unitId));
-  }, [records, unitsById, fQuarry, fUnit, fType]);
+  }, [records, unitsById, fQuarry, fUnit, fType, windowMonths]);
+
+  const perHourTrend = useMemo(() => {
+    const months = monthsInPeriod([...new Set(records.map((r) => r.month))], period);
+    return months.map((month) => {
+      let cost = 0, hours = 0;
+      const seen = new Set<string>();
+      for (const r of records) {
+        if (r.month !== month) continue;
+        const u = unitsById.get(r.unitId);
+        if (fQuarry !== "all" && u?.quarryId !== fQuarry) continue;
+        if (fUnit !== "all" && r.unitId !== fUnit) continue;
+        for (const l of r.lines) cost += l.cost;
+        if (!seen.has(r.unitId)) { hours += r.hours; seen.add(r.unitId); }
+      }
+      return { month, value: hours > 0 ? cost / hours : 0 };
+    });
+  }, [records, period, unitsById, fQuarry, fUnit]);
 
   const totals = useMemo(() => {
     const cost = rows.reduce((s, r) => s + r.cost, 0);
@@ -185,6 +211,10 @@ export default function MaintenancePage() {
             <StatCard label={<>Maint $/hr <InfoTip title="Maintenance $/hr" formula="Σ cost ÷ Σ monthly hours" /></>} value={usd(totals.perHour, 2)} />
             <StatCard label={<>Scheduled % <InfoTip title="Scheduled share" formula="preventive cost ÷ total cost" align="left" /></>} value={`${(totals.scheduledPct * 100).toFixed(0)}%`} tone={totals.scheduledPct >= 0.6 ? "olive" : "gold"} />
             <StatCard label="Top subsystem" value={<span className="text-lg">{totals.topSub}</span>} tone="danger" />
+          </div>
+
+          <div className="mb-4 grid grid-cols-1 sm:max-w-sm">
+            <MiniTrend label="Maintenance $/hr" data={perHourTrend} fmt={(n) => usd(n, 2)} color="#b07a8c" goodWhenUp={false} />
           </div>
 
           <div className="mb-4 flex flex-wrap items-center gap-2">

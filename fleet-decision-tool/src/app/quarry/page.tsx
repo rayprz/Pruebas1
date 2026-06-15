@@ -19,9 +19,14 @@ import { useCatalog } from "@/lib/catalogStore";
 import { useFleet } from "@/lib/fleetStore";
 import { useQuarry } from "@/lib/quarryStore";
 import { useMaint } from "@/lib/maintStore";
+import { useShiftLog } from "@/lib/shiftStore";
 import { actualMaintPerHrByUnit, actualAvailabilityByUnit } from "@/lib/maintLog";
+import { useFleetHistory } from "@/lib/fleetHistoryStore";
+import { usePeriod, monthsInPeriod } from "@/lib/periodStore";
+import { kpiHistory, KPI_DEFS, aggKpi } from "@/lib/history";
 import type { Category, FleetUnit, QuarryFront } from "@/lib/types";
 import { ModuleIntro } from "@/components/ModuleIntro";
+import { MiniTrend } from "@/components/MiniTrend";
 import { InfoTip } from "@/components/InfoTip";
 import { QuarryActuals } from "@/components/QuarryActuals";
 import { IconPlus, IconTrash } from "@/components/Icons";
@@ -58,6 +63,9 @@ export default function QuarryPage() {
   const { classById, classes } = useCatalog();
   const { units } = useFleet();
   const { records: maintRecords } = useMaint();
+  const { records: shiftRecords } = useShiftLog();
+  const { months: fleetMonths } = useFleetHistory();
+  const { period } = usePeriod();
   const q = useQuarry();
   const { config, active } = q;
 
@@ -83,6 +91,16 @@ export default function QuarryPage() {
     () => computeQuarry(config, classById, params, unitsById, maintByUnit, availByUnit),
     [config, classById, params, unitsById, maintByUnit, availByUnit]
   );
+
+  const trends = useMemo(() => {
+    const months = monthsInPeriod([...new Set(fleetMonths.map((m) => m.month))], period);
+    const hist = kpiHistory(months, [active], units, fleetMonths, shiftRecords, maintRecords, classById, params);
+    const point = (key: string) => {
+      const def = KPI_DEFS.find((d) => d.key === key)!;
+      return { def, data: hist.map((h, i) => ({ month: months[i], value: aggKpi(def, [...h.byQuarry.values()]) })) };
+    };
+    return { systemTph: point("systemTph"), costPerTon: point("costPerTon"), maintPerTon: point("maintPerTon") };
+  }, [active, units, fleetMonths, period, shiftRecords, maintRecords, classById, params]);
 
   const loaderOptions = classes.filter((c) => LOADER_CATS.includes(c.category)).map((c) => ({ value: c.id, label: c.name }));
 
@@ -191,6 +209,13 @@ export default function QuarryPage() {
           sub={`${r.fuelGalPerTon.toFixed(2)} gal/t fuel`}
           tone="accent"
         />
+      </div>
+
+      {/* Trends over the selected period */}
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <MiniTrend label="System tph" data={trends.systemTph.data} fmt={trends.systemTph.def.fmt} color="#5b7c8a" goodWhenUp />
+        <MiniTrend label="Cost / ton" data={trends.costPerTon.data} fmt={trends.costPerTon.def.fmt} color="#b06a3c" goodWhenUp={false} />
+        <MiniTrend label="Maintenance $/ton" data={trends.maintPerTon.data} fmt={trends.maintPerTon.def.fmt} color="#b07a8c" goodWhenUp={false} />
       </div>
 
       {/* What's costing efficiency today */}

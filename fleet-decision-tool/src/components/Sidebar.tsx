@@ -11,6 +11,7 @@ import {
   IconQuarry,
   IconSettings,
   IconSites,
+  IconTrend,
   IconTruck,
   IconWrench,
 } from "./Icons";
@@ -23,6 +24,7 @@ const GROUPS: {
     heading: "Overview",
     items: [
       { href: "/dashboard", label: "Executive Dashboard", Icon: IconDashboard },
+      { href: "/trends", label: "Trends & History", Icon: IconTrend },
       { href: "/compare-quarries", label: "Compare Quarries", Icon: IconQuarry },
       { href: "/quarries", label: "Manage Quarries", Icon: IconSettings },
     ],

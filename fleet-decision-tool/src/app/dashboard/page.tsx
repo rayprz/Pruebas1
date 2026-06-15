@@ -21,7 +21,11 @@ import { useCatalog } from "@/lib/catalogStore";
 import { useQuarry } from "@/lib/quarryStore";
 import { useShiftLog } from "@/lib/shiftStore";
 import { useMaint } from "@/lib/maintStore";
+import { useFleetHistory } from "@/lib/fleetHistoryStore";
+import { usePeriod, monthsInPeriod } from "@/lib/periodStore";
+import { kpiHistory, KPI_DEFS, aggKpi } from "@/lib/history";
 import { Card, PageHeader, SectionTitle, Select, StatCard } from "@/components/ui";
+import { MiniTrend } from "@/components/MiniTrend";
 import { InfoTip } from "@/components/InfoTip";
 
 export default function DashboardPage() {
@@ -31,6 +35,8 @@ export default function DashboardPage() {
   const { quarries } = useQuarry();
   const { records } = useShiftLog();
   const { records: maintRecords } = useMaint();
+  const { months: fleetMonths } = useFleetHistory();
+  const { period } = usePeriod();
   const maintByUnit = useMemo(
     () => (params.useActualMaint ? actualMaintPerHrByUnit(maintRecords) : undefined),
     [params.useActualMaint, maintRecords]
@@ -119,6 +125,19 @@ export default function DashboardPage() {
     return production > 0 ? annualized / production : 0;
   }, [metrics, maintByQuarry]);
 
+  const trendMonths = useMemo(
+    () => monthsInPeriod([...new Set(fleetMonths.map((m) => m.month))], period),
+    [fleetMonths, period]
+  );
+  const trends = useMemo(() => {
+    const hist = kpiHistory(trendMonths, includedQuarries, units, fleetMonths, records, maintRecords, classById, params);
+    const point = (key: string) => {
+      const def = KPI_DEFS.find((d) => d.key === key)!;
+      return { def, data: hist.map((h, i) => ({ month: trendMonths[i], value: aggKpi(def, [...h.byQuarry.values()]) })) };
+    };
+    return { operating: point("operating"), attainment: point("attainment"), maintPerTon: point("maintPerTon") };
+  }, [trendMonths, includedQuarries, units, fleetMonths, records, maintRecords, classById, params]);
+
   return (
     <div>
       <PageHeader
@@ -134,6 +153,13 @@ export default function DashboardPage() {
         <StatCard label={<>Excess OPEX / yr <InfoTip title="Non-optimal fleet" formula="Σ (current − optimal operating) per quarry" align="left" /></>} value={usdCompact(Math.max(0, agg.excess))} sub="vs right-sized" tone={agg.excess > 0 ? "danger" : "olive"} />
         <StatCard label={<>Quarry losses / yr <InfoTip title="Quarry efficiency" formula="Σ loss tph × productive hrs/yr × margin" align="right" /></>} value={usdCompact(agg.losses)} tone="danger" />
         <StatCard label="Plant attainment" value={`${(agg.attainment * 100).toFixed(0)}%`} sub="avg of quarries" tone={agg.attainment >= 0.9 ? "olive" : "accent"} />
+      </div>
+
+      {/* Trends over the selected period */}
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <MiniTrend label="Fleet OPEX / yr" data={trends.operating.data} fmt={trends.operating.def.fmt} color="#b06a3c" goodWhenUp={false} />
+        <MiniTrend label="Plan attainment" data={trends.attainment.data} fmt={trends.attainment.def.fmt} color="#6f7548" goodWhenUp />
+        <MiniTrend label="Maintenance $/ton" data={trends.maintPerTon.data} fmt={trends.maintPerTon.def.fmt} color="#5b7c8a" goodWhenUp={false} />
       </div>
 
       {/* By quarry rollup */}

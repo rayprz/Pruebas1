@@ -17,6 +17,7 @@ import { csvToShifts, shiftsToCsv, summarize } from "@/lib/shiftLog";
 import { downloadCsv } from "@/lib/csv";
 import { downloadTemplate, fileToCsv } from "@/lib/xlsx";
 import { useShiftLog } from "@/lib/shiftStore";
+import { usePeriod, monthsInPeriod } from "@/lib/periodStore";
 import type { QuarryConfig } from "@/lib/types";
 import type { QuarryResult } from "@/lib/quarry";
 import { ModuleIntro } from "@/components/ModuleIntro";
@@ -62,11 +63,17 @@ export function QuarryActuals({
 }) {
   const { records: allRecords, addEntry, updateEntry, removeEntry, updateRecordMeta, replaceRecords, reset } =
     useShiftLog();
+  const { period } = usePeriod();
   const [adding, setAdding] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const records = useMemo(() => allRecords.filter((r) => r.quarryId === quarryId), [allRecords, quarryId]);
+  const quarryRecords = useMemo(() => allRecords.filter((r) => r.quarryId === quarryId), [allRecords, quarryId]);
+  // Respect the global period filter from the top bar (by shift month).
+  const records = useMemo(() => {
+    const window = new Set(monthsInPeriod([...new Set(quarryRecords.map((r) => r.date.slice(0, 7)))], period));
+    return quarryRecords.filter((r) => window.has(r.date.slice(0, 7)));
+  }, [quarryRecords, period]);
   const targetTph = config.targetTph;
   const modelByFront = useMemo(
     () => new Map(model.fronts.map((f) => [f.name, f.delivered])),
@@ -256,7 +263,7 @@ export function QuarryActuals({
         <div className="flex flex-wrap items-center gap-2">
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,text/csv" onChange={onFile} className="hidden" />
           <Button variant="ghost" onClick={() => fileRef.current?.click()}>Import</Button>
-          <Button variant="ghost" onClick={() => downloadCsv("shift-log.csv", shiftsToCsv(records))}>Export</Button>
+          <Button variant="ghost" onClick={() => downloadCsv("shift-log.csv", shiftsToCsv(quarryRecords))}>Export</Button>
           <Button variant="ghost" onClick={() => downloadTemplate("shift-template.xlsx", TPL_HEADERS, TPL_SAMPLE, TPL_NOTES)}>Excel template</Button>
           <Button onClick={() => setAdding((a) => !a)}><IconPlus width={16} height={16} /> Add entry</Button>
         </div>

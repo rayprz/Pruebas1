@@ -105,6 +105,14 @@ export const IconQuarry = (p: IconProps) => (
   </svg>
 );
 
+export const IconTrend = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <path d="M3 3v18h18" />
+    <path d="M7 14l3.5-4 3 2.5L21 6" />
+    <path d="M21 11V6h-5" />
+  </svg>
+);
+
 export const IconSpark = (p: IconProps) => (
   <svg {...base} {...p}>
     <path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8" />
