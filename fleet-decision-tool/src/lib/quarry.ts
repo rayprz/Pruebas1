@@ -2,6 +2,7 @@ import { MODELS } from "@/data/catalog";
 import { unitOperatingPerHour } from "./engine";
 import type {
   EquivalenceClass,
+  FleetUnit,
   GlobalParams,
   QuarryConfig,
   QuarryFront,
@@ -11,17 +12,30 @@ const refModel = (classId: string) =>
   MODELS.find((m) => m.classId === classId && m.source === "oem") ??
   MODELS.find((m) => m.classId === classId);
 
+const modelLabel = (modelId: string) => {
+  const m = MODELS.find((x) => x.id === modelId);
+  return m ? `${m.brand} ${m.model}` : "Truck";
+};
+
 export type FrontBottleneck = "Loading" | "Hauling" | "Balanced";
 
-export interface TruckGroupResult {
-  id: string;
+/** A single haul truck (real fleet unit) assigned to a front. */
+export interface TruckUnitResult {
+  unitId: string;
+  unitNo: string;
   label: string;
-  classId: string;
-  count: number;
   payload: number;
   passes: number;
   cycleSec: number;
   tphPerTruck: number;
+  active: boolean;
+  status: string;
+}
+
+/** Trucks of the same label, aggregated for the flow-card chips. */
+export interface TruckGroupDisplay {
+  label: string;
+  count: number;
   groupTph: number;
 }
 
@@ -38,7 +52,9 @@ export interface FrontResult {
   /** haul ÷ loader; >1 over-trucked, <1 under-trucked */
   matchFactor: number;
   truckCount: number;
-  groups: TruckGroupResult[];
+  activeTruckCount: number;
+  units: TruckUnitResult[];
+  groups: TruckGroupDisplay[];
   /** Loader idle capacity not used because trucks can't keep up (tph) */
   haulShortfallTph: number;
   /** Truck capacity wasted queueing at the loader (tph) */
@@ -131,7 +147,8 @@ function classFuel(classId: string, classById: Map<string, EquivalenceClass>): n
 
 function computeFront(
   front: QuarryFront,
-  classById: Map<string, EquivalenceClass>
+  classById: Map<string, EquivalenceClass>,
+  unitsById: Map<string, FleetUnit>
 ): FrontResult {
   const bucketEff = front.loaderBucketTons * front.bucketFillFactor;
   const loaderTph =
@@ -144,27 +161,44 @@ function computeFront(
   const returnSec =
     front.emptySpeedKmh > 0 ? (front.haulKm / front.emptySpeedKmh) * 3600 : 0;
 
-  const groups: TruckGroupResult[] = front.trucks.map((g) => {
-    const payload = classById.get(g.classId)?.payloadTons ?? 40;
-    const passes = Math.max(1, Math.round(payload / Math.max(1, bucketEff)));
-    const loadTimeSec = passes * front.loaderCycleSec;
-    const cycleSec = front.spotDumpSec + loadTimeSec + haulLoadedSec + returnSec;
-    const tphPerTruck = cycleSec > 0 ? payload * (3600 / cycleSec) * g.availability : 0;
-    return {
-      id: g.id,
-      label: g.label,
-      classId: g.classId,
-      count: g.count,
-      payload,
-      passes,
-      cycleSec,
-      tphPerTruck,
-      groupTph: tphPerTruck * g.count,
-    };
-  });
+  // Resolve each assigned fleet unit to its productivity
+  const units: TruckUnitResult[] = front.truckUnitIds
+    .map((id) => unitsById.get(id))
+    .filter((u): u is FleetUnit => u !== undefined)
+    .map((u) => {
+      const payload = classById.get(u.classId)?.payloadTons ?? 40;
+      const passes = Math.max(1, Math.round(payload / Math.max(1, bucketEff)));
+      const loadTimeSec = passes * front.loaderCycleSec;
+      const cycleSec = front.spotDumpSec + loadTimeSec + haulLoadedSec + returnSec;
+      const active = u.status === "active";
+      const tphPerTruck =
+        active && cycleSec > 0 ? payload * (3600 / cycleSec) * u.availability : 0;
+      return {
+        unitId: u.id,
+        unitNo: u.unitNo,
+        label: modelLabel(u.modelId),
+        payload,
+        passes,
+        cycleSec,
+        tphPerTruck,
+        active,
+        status: u.status,
+      };
+    });
 
-  const haulTph = groups.reduce((s, g) => s + g.groupTph, 0);
-  const truckCount = groups.reduce((s, g) => s + g.count, 0);
+  // Aggregate by label for the flow chips
+  const groupMap = new Map<string, TruckGroupDisplay>();
+  for (const u of units) {
+    const g = groupMap.get(u.label) ?? { label: u.label, count: 0, groupTph: 0 };
+    g.count += 1;
+    g.groupTph += u.tphPerTruck;
+    groupMap.set(u.label, g);
+  }
+  const groups = [...groupMap.values()];
+
+  const haulTph = units.reduce((s, u) => s + u.tphPerTruck, 0);
+  const truckCount = units.length;
+  const activeTruckCount = units.filter((u) => u.active).length;
   const delivered = Math.min(loaderTph, haulTph);
   const matchFactor = loaderTph > 0 ? haulTph / loaderTph : 0;
 
@@ -175,9 +209,9 @@ function computeFront(
 
   const haulShortfallTph = Math.max(0, loaderTph - haulTph);
   const overTruckTph = Math.max(0, haulTph - loaderTph);
-  const avgTphPerTruck = truckCount > 0 ? haulTph / truckCount : 0;
+  const avgTphPerTruck = activeTruckCount > 0 ? haulTph / activeTruckCount : 0;
   const trucksToBalance =
-    avgTphPerTruck > 0 ? Math.max(0, Math.ceil(loaderTph / avgTphPerTruck) - truckCount) : 0;
+    avgTphPerTruck > 0 ? Math.max(0, Math.ceil(loaderTph / avgTphPerTruck) - activeTruckCount) : 0;
 
   return {
     id: front.id,
@@ -190,6 +224,8 @@ function computeFront(
     bottleneck,
     matchFactor,
     truckCount,
+    activeTruckCount,
+    units,
     groups,
     haulShortfallTph,
     overTruckTph,
@@ -200,13 +236,14 @@ function computeFront(
 export function computeQuarry(
   cfg: QuarryConfig,
   classById: Map<string, EquivalenceClass>,
-  params: GlobalParams
+  params: GlobalParams,
+  unitsById: Map<string, FleetUnit>
 ): QuarryResult {
   const scheduledHoursYear = cfg.shiftsPerDay * cfg.hoursPerShift * cfg.daysPerYear;
   const productiveHoursYear = scheduledHoursYear * cfg.operatingEfficiency;
   const shiftHours = cfg.hoursPerShift;
 
-  const fronts = cfg.fronts.map((f) => computeFront(f, classById));
+  const fronts = cfg.fronts.map((f) => computeFront(f, classById, unitsById));
 
   const crusherCapacityTph = cfg.crusherRatedTph * cfg.crusherAvailability;
   const crusherFronts = fronts.filter((f) => f.destination === "crusher");
@@ -328,9 +365,11 @@ export function computeQuarry(
   for (const f of cfg.fronts) {
     loadCostYr += classOpHr(f.loaderClassId, classById, params) * productiveHoursYear;
     fuelGalYr += classFuel(f.loaderClassId, classById) * productiveHoursYear;
-    for (const g of f.trucks) {
-      haulCostYr += classOpHr(g.classId, classById, params) * g.count * productiveHoursYear;
-      fuelGalYr += classFuel(g.classId, classById) * g.count * productiveHoursYear;
+    for (const unitId of f.truckUnitIds) {
+      const unit = unitsById.get(unitId);
+      if (!unit) continue;
+      haulCostYr += classOpHr(unit.classId, classById, params) * productiveHoursYear;
+      fuelGalYr += classFuel(unit.classId, classById) * productiveHoursYear;
     }
   }
   const crushCostYr =

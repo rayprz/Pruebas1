@@ -8,14 +8,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type {
-  QuarryConfig,
-  QuarryFront,
-  QuarryProduct,
-  QuarryTruckGroup,
-} from "./types";
+import type { QuarryConfig, QuarryFront, QuarryProduct } from "./types";
 
-const KEY = "fleet-tool-quarry-v2";
+const KEY = "fleet-tool-quarry-v3";
 
 const DEFAULT_CONFIG: QuarryConfig = {
   shiftsPerDay: 2,
@@ -49,10 +44,7 @@ const DEFAULT_CONFIG: QuarryConfig = {
       loadedSpeedKmh: 28,
       emptySpeedKmh: 38,
       spotDumpSec: 75,
-      trucks: [
-        { id: "t1", label: "Cat 777", classId: "ht-777", count: 2, availability: 0.85 },
-        { id: "t2", label: "Komatsu HD785", classId: "ht-777", count: 1, availability: 0.8 },
-      ],
+      truckUnitIds: ["ht01", "ht02", "ht04"],
     },
     {
       id: "f-south",
@@ -68,7 +60,7 @@ const DEFAULT_CONFIG: QuarryConfig = {
       loadedSpeedKmh: 26,
       emptySpeedKmh: 36,
       spotDumpSec: 70,
-      trucks: [{ id: "t3", label: "Cat 773", classId: "ht-773", count: 3, availability: 0.85 }],
+      truckUnitIds: ["ht06", "ht07", "ht08"],
     },
     {
       id: "f-clay",
@@ -84,10 +76,7 @@ const DEFAULT_CONFIG: QuarryConfig = {
       loadedSpeedKmh: 24,
       emptySpeedKmh: 34,
       spotDumpSec: 60,
-      trucks: [
-        { id: "t4", label: "Cat 773", classId: "ht-773", count: 2, availability: 0.83 },
-        { id: "t5", label: "Volvo A40", classId: "at-740", count: 1, availability: 0.82 },
-      ],
+      truckUnitIds: ["ht09", "ht10", "at11"],
     },
     {
       id: "f-ob",
@@ -103,7 +92,7 @@ const DEFAULT_CONFIG: QuarryConfig = {
       loadedSpeedKmh: 22,
       emptySpeedKmh: 32,
       spotDumpSec: 55,
-      trucks: [{ id: "t6", label: "Cat 740", classId: "at-740", count: 3, availability: 0.85 }],
+      truckUnitIds: ["at12", "at13", "at14"],
     },
   ],
 
@@ -122,9 +111,9 @@ interface QuarryStore {
   updateFront: (id: string, patch: Partial<QuarryFront>) => void;
   addFront: () => void;
   removeFront: (id: string) => void;
-  updateTruckGroup: (frontId: string, groupId: string, patch: Partial<QuarryTruckGroup>) => void;
-  addTruckGroup: (frontId: string) => void;
-  removeTruckGroup: (frontId: string, groupId: string) => void;
+  /** Assign a fleet truck unit to a front (removing it from any other front). */
+  assignTruck: (frontId: string, unitId: string) => void;
+  unassignTruck: (frontId: string, unitId: string) => void;
   updateProduct: (id: string, patch: Partial<QuarryProduct>) => void;
   reset: () => void;
 }
@@ -186,26 +175,24 @@ export function QuarryProvider({ children }: { children: ReactNode }) {
               loadedSpeedKmh: 25,
               emptySpeedKmh: 35,
               spotDumpSec: 65,
-              trucks: [{ id: `t-${Date.now()}`, label: "Cat 773", classId: "ht-773", count: 2, availability: 0.85 }],
+              truckUnitIds: [],
             },
           ],
         }),
       removeFront: (id) => persist({ ...config, fronts: config.fronts.filter((f) => f.id !== id) }),
-      updateTruckGroup: (frontId, groupId, patch) =>
-        mapFront(frontId, (f) => ({
-          ...f,
-          trucks: f.trucks.map((g) => (g.id === groupId ? { ...g, ...patch } : g)),
-        })),
-      addTruckGroup: (frontId) =>
-        mapFront(frontId, (f) => ({
-          ...f,
-          trucks: [
-            ...f.trucks,
-            { id: `t-${Date.now()}`, label: "Cat 773", classId: "ht-773", count: 1, availability: 0.85 },
-          ],
-        })),
-      removeTruckGroup: (frontId, groupId) =>
-        mapFront(frontId, (f) => ({ ...f, trucks: f.trucks.filter((g) => g.id !== groupId) })),
+      assignTruck: (frontId, unitId) =>
+        // remove the unit from every front, then add it to the target front
+        persist({
+          ...config,
+          fronts: config.fronts.map((f) => {
+            const without = f.truckUnitIds.filter((id) => id !== unitId);
+            return f.id === frontId
+              ? { ...f, truckUnitIds: [...without, unitId] }
+              : { ...f, truckUnitIds: without };
+          }),
+        }),
+      unassignTruck: (frontId, unitId) =>
+        mapFront(frontId, (f) => ({ ...f, truckUnitIds: f.truckUnitIds.filter((id) => id !== unitId) })),
       updateProduct: (id, patch) =>
         persist({
           ...config,

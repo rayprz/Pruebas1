@@ -7,6 +7,7 @@ const COLUMNS = [
   "year",
   "currentHours",
   "annualHours",
+  "availability",
   "site",
   "status",
 ] as const;
@@ -104,6 +105,7 @@ export function csvToUnits(text: string): ParseResult {
       year: num("year", new Date().getFullYear()),
       currentHours: num("currentHours"),
       annualHours: num("annualHours", 4000),
+      availability: num("availability", 0.85),
       site: get("site") || "Unassigned",
       status: (STATUSES.has(status) ? status : "active") as FleetUnit["status"],
     });

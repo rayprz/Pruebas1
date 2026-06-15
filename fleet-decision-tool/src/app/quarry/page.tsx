@@ -16,8 +16,9 @@ import { usd, usdCompact } from "@/lib/engine";
 import { computeQuarry, type FrontResult, type LossItem } from "@/lib/quarry";
 import { useParams } from "@/lib/store";
 import { useCatalog } from "@/lib/catalogStore";
+import { useFleet } from "@/lib/fleetStore";
 import { useQuarry } from "@/lib/quarryStore";
-import type { Category, QuarryFront } from "@/lib/types";
+import type { Category, FleetUnit, QuarryFront } from "@/lib/types";
 import { ModuleIntro } from "@/components/ModuleIntro";
 import { InfoTip } from "@/components/InfoTip";
 import { QuarryActuals } from "@/components/QuarryActuals";
@@ -53,15 +54,36 @@ const FORMULAS = [
 export default function QuarryPage() {
   const { params } = useParams();
   const { classById, classes } = useCatalog();
+  const { units } = useFleet();
   const q = useQuarry();
   const { config } = q;
 
   const [tab, setTab] = useState<"model" | "actuals">("model");
 
-  const r = useMemo(() => computeQuarry(config, classById, params), [config, classById, params]);
+  const unitsById = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
+
+  const r = useMemo(
+    () => computeQuarry(config, classById, params, unitsById),
+    [config, classById, params, unitsById]
+  );
 
   const loaderOptions = classes.filter((c) => LOADER_CATS.includes(c.category)).map((c) => ({ value: c.id, label: c.name }));
-  const truckOptions = classes.filter((c) => TRUCK_CATS.includes(c.category)).map((c) => ({ value: c.id, label: c.name }));
+
+  // Haul trucks from My Fleet, and where each is currently assigned
+  const truckUnits = useMemo(
+    () =>
+      units.filter((u) => {
+        const c = classById.get(u.classId);
+        return c && TRUCK_CATS.includes(c.category);
+      }),
+    [units, classById]
+  );
+  const assignedFrontByUnit = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const f of config.fronts) for (const id of f.truckUnitIds) map.set(id, f.name);
+    return map;
+  }, [config.fronts]);
+  const unassignedTrucks = truckUnits.filter((u) => !assignedFrontByUnit.has(u.id));
 
   return (
     <div>
@@ -168,10 +190,16 @@ export default function QuarryPage() {
       </div>
 
       {/* Per-front editing */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between">
         <SectionTitle>Fronts &amp; fleet</SectionTitle>
         <Button onClick={q.addFront}><IconPlus width={16} height={16} /> Add front</Button>
       </div>
+      {unassignedTrucks.length > 0 && (
+        <div className="mb-3 rounded-xl border border-line bg-accentsoft/40 px-4 py-2 text-sm text-inksoft">
+          <span className="font-medium text-accentink">{unassignedTrucks.length} truck(s) unassigned:</span>{" "}
+          {unassignedTrucks.map((u) => u.unitNo).join(", ")} — assign them to a front below to put them to work.
+        </div>
+      )}
       <div className="space-y-3">
         {config.fronts.map((front) => {
           const res = r.fronts.find((x) => x.id === front.id)!;
@@ -181,7 +209,8 @@ export default function QuarryPage() {
               front={front}
               res={res}
               loaderOptions={loaderOptions}
-              truckOptions={truckOptions}
+              truckUnits={truckUnits}
+              assignedFrontByUnit={assignedFrontByUnit}
               q={q}
             />
           );
@@ -382,7 +411,7 @@ function FrontFlowCard({ f }: { f: FrontResult }) {
       <div className="mt-2 flex items-center justify-between">
         <div className="flex flex-wrap gap-1">
           {f.groups.map((g) => (
-            <span key={g.id} className="rounded-md bg-panel px-1.5 py-0.5 text-[11px] text-inksoft">
+            <span key={g.label} className="rounded-md bg-panel px-1.5 py-0.5 text-[11px] text-inksoft">
               {g.count}× {g.label}
             </span>
           ))}
@@ -474,16 +503,19 @@ function FrontEditor({
   front,
   res,
   loaderOptions,
-  truckOptions,
+  truckUnits,
+  assignedFrontByUnit,
   q,
 }: {
   front: QuarryFront;
   res: FrontResult;
   loaderOptions: { value: string; label: string }[];
-  truckOptions: { value: string; label: string }[];
+  truckUnits: FleetUnit[];
+  assignedFrontByUnit: Map<string, string>;
   q: ReturnType<typeof useQuarry>;
 }) {
   const [open, setOpen] = useState(false);
+  const assignable = truckUnits.filter((u) => !front.truckUnitIds.includes(u.id));
   return (
     <Card className="overflow-hidden">
       <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-4 px-4 py-3 text-left hover:bg-panel/50">
@@ -532,53 +564,66 @@ function FrontEditor({
             </div>
           </div>
 
-          {/* Truck groups */}
+          {/* Trucks from My Fleet */}
           <div className="mt-4">
-            <div className="mb-2 flex items-center justify-between">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <p className="flex items-center text-[11px] font-semibold uppercase tracking-[0.1em] text-accentink">
-                Trucks (heterogeneous) <InfoTip title="Truck feed (tph)" formula="payload × 3600÷cycle × availability, summed over groups" align="left" />
+                Trucks from My Fleet <InfoTip title="Truck feed (tph)" formula="payload × 3600÷cycle × availability, per assigned unit" align="left">Assign real units from My Fleet. Payload, brand and availability come from the unit; only “active” units produce.</InfoTip>
               </p>
-              <Button variant="ghost" onClick={() => q.addTruckGroup(front.id)}><IconPlus width={14} height={14} /> Add group</Button>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] text-sm">
-                <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-[0.1em] text-inkfaint">
-                    <th className="py-1 pr-2 font-semibold">Label (brand)</th>
-                    <th className="py-1 pr-2 font-semibold">Size class</th>
-                    <th className="py-1 pr-2 text-right font-semibold">Count</th>
-                    <th className="py-1 pr-2 text-right font-semibold">Avail.</th>
-                    <th className="py-1 pr-2 text-right font-semibold">Passes</th>
-                    <th className="py-1 pr-2 text-right font-semibold">tph/truck</th>
-                    <th className="py-1 pr-2 text-right font-semibold">Group tph</th>
-                    <th className="py-1" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {front.trucks.map((g) => {
-                    const gr = res.groups.find((x) => x.id === g.id);
+              {assignable.length > 0 && (
+                <select
+                  value=""
+                  onChange={(e) => { if (e.target.value) q.assignTruck(front.id, e.target.value); }}
+                  className="rounded-lg border border-line bg-card px-2.5 py-1.5 text-sm text-ink focus:border-accent focus:outline-none"
+                >
+                  <option value="">+ Assign truck…</option>
+                  {assignable.map((u) => {
+                    const at = assignedFrontByUnit.get(u.id);
                     return (
-                      <tr key={g.id} className="border-t border-line/60">
-                        <td className="py-1.5 pr-2"><TextInput value={g.label} onChange={(v) => q.updateTruckGroup(front.id, g.id, { label: v })} className="w-32 !py-0.5" /></td>
-                        <td className="py-1.5 pr-2"><Select value={g.classId} onChange={(v) => q.updateTruckGroup(front.id, g.id, { classId: v })} options={truckOptions} className="!py-0.5" /></td>
-                        <td className="py-1.5 pr-2 text-right">
-                          <input type="number" value={g.count} onChange={(e) => q.updateTruckGroup(front.id, g.id, { count: Number(e.target.value) })}
-                            className="w-14 rounded-md border border-line bg-card px-1.5 py-0.5 text-right tabular text-ink focus:border-accent focus:outline-none" /></td>
-                        <td className="py-1.5 pr-2 text-right">
-                          <input type="number" step={0.01} value={g.availability} onChange={(e) => q.updateTruckGroup(front.id, g.id, { availability: Number(e.target.value) })}
-                            className="w-16 rounded-md border border-line bg-card px-1.5 py-0.5 text-right tabular text-ink focus:border-accent focus:outline-none" /></td>
-                        <td className="py-1.5 pr-2 text-right tabular text-inkfaint">{gr?.passes ?? "—"}</td>
-                        <td className="py-1.5 pr-2 text-right tabular text-inksoft">{gr ? tph(gr.tphPerTruck) : "—"}</td>
-                        <td className="py-1.5 pr-2 text-right tabular font-medium text-ink">{gr ? tph(gr.groupTph) : "—"}</td>
-                        <td className="py-1.5 text-right">
-                          <button onClick={() => q.removeTruckGroup(front.id, g.id)} className="text-inkfaint hover:text-danger" title="Remove group"><IconTrash width={14} height={14} /></button>
-                        </td>
-                      </tr>
+                      <option key={u.id} value={u.id}>
+                        {u.unitNo}{at ? ` (move from ${at})` : ""}
+                      </option>
                     );
                   })}
-                </tbody>
-              </table>
+                </select>
+              )}
             </div>
+            {res.units.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-line px-3 py-3 text-sm text-inkfaint">No trucks assigned. Use “Assign truck…” to put fleet units on this front.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[560px] text-sm">
+                  <thead>
+                    <tr className="text-left text-[11px] uppercase tracking-[0.1em] text-inkfaint">
+                      <th className="py-1 pr-2 font-semibold">Unit</th>
+                      <th className="py-1 pr-2 font-semibold">Model</th>
+                      <th className="py-1 pr-2 text-right font-semibold">Payload</th>
+                      <th className="py-1 pr-2 text-right font-semibold">Passes</th>
+                      <th className="py-1 pr-2 text-right font-semibold">tph</th>
+                      <th className="py-1 pr-2 font-semibold">Status</th>
+                      <th className="py-1" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {res.units.map((u) => (
+                      <tr key={u.unitId} className="border-t border-line/60">
+                        <td className="py-1.5 pr-2 font-medium text-ink">{u.unitNo}</td>
+                        <td className="py-1.5 pr-2 text-inksoft">{u.label}</td>
+                        <td className="py-1.5 pr-2 text-right tabular text-inkfaint">{u.payload} t</td>
+                        <td className="py-1.5 pr-2 text-right tabular text-inkfaint">{u.passes}</td>
+                        <td className={`py-1.5 pr-2 text-right tabular font-medium ${u.active ? "text-ink" : "text-inkfaint"}`}>{u.active ? tph(u.tphPerTruck) : "—"}</td>
+                        <td className="py-1.5 pr-2">
+                          <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium capitalize ${u.status === "active" ? "bg-olivesoft text-olive" : u.status === "standby" ? "bg-accentsoft text-accentink" : "bg-dangersoft text-danger"}`}>{u.status}</span>
+                        </td>
+                        <td className="py-1.5 text-right">
+                          <button onClick={() => q.unassignTruck(front.id, u.unitId)} className="text-inkfaint hover:text-danger" title="Unassign"><IconTrash width={14} height={14} /></button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           <div className="mt-4 flex items-center justify-between border-t border-line pt-3">

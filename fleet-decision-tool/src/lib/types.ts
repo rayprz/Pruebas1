@@ -80,6 +80,8 @@ export interface FleetUnit {
   currentHours: number;
   /** Projected utilization, hours per year */
   annualHours: number;
+  /** Mechanical availability, 0..1 (used by the Quarry model) */
+  availability: number;
   /** Work area / site this unit is assigned to */
   site: string;
   status: "active" | "standby" | "down";
@@ -133,20 +135,9 @@ export interface QuarryProduct {
   stockpileTons: number;
 }
 
-/** A homogeneous set of haul trucks within a front (one size/brand). */
-export interface QuarryTruckGroup {
-  id: string;
-  /** Free label, e.g. "Cat 777" or "Komatsu HD785" */
-  label: string;
-  /** Size class (drives payload) */
-  classId: string;
-  count: number;
-  /** Mechanical availability for this group, 0..1 (brand/condition specific) */
-  availability: number;
-}
-
-/** A loading face / route. Each front has its own loader and (heterogeneous)
- *  truck fleet, so each can have its own bottleneck. */
+/** A loading face / route. Each front has its own loader and a set of haul
+ *  trucks (real units assigned from My Fleet), so each can have its own
+ *  bottleneck. */
 export interface QuarryFront {
   id: string;
   name: string;
@@ -164,8 +155,8 @@ export interface QuarryFront {
   loadedSpeedKmh: number;
   emptySpeedKmh: number;
   spotDumpSec: number;
-  // Heterogeneous truck fleet
-  trucks: QuarryTruckGroup[];
+  /** Haul trucks assigned to this front — references FleetUnit ids in My Fleet */
+  truckUnitIds: string[];
 }
 
 /** Full operating assumptions for one aggregates quarry with multiple fronts. */

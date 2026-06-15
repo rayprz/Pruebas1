@@ -114,7 +114,11 @@ export default function DashboardPage() {
   }, [sites, units, classById, modelById, params]);
 
   // --- Quarry (model + actuals) -------------------------------------------
-  const quarry = useMemo(() => computeQuarry(config, classById, params), [config, classById, params]);
+  const unitsById = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
+  const quarry = useMemo(
+    () => computeQuarry(config, classById, params, unitsById),
+    [config, classById, params, unitsById]
+  );
   const shift = useMemo(() => {
     const modelByFront = new Map(quarry.fronts.map((f) => [f.name, f.delivered]));
     return summarize(records, modelByFront, config.targetTph);

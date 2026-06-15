@@ -29,9 +29,9 @@ import {
   TextInput,
 } from "@/components/ui";
 
-const TEMPLATE = `unitNo,classId,modelId,year,currentHours,annualHours,site,status
-HT-101,ht-777,cat-777g,2019,28000,5000,Limestone Quarry,active
-LD-201,pl-992,km-wa800,2021,16000,4500,Limestone Quarry,active`;
+const TEMPLATE = `unitNo,classId,modelId,year,currentHours,annualHours,availability,site,status
+HT-101,ht-777,cat-777g,2019,28000,5000,0.85,Limestone Quarry,active
+LD-201,pl-992,km-wa800,2021,16000,4500,0.9,Limestone Quarry,active`;
 
 export default function FleetPage() {
   const { params } = useParams();
@@ -158,7 +158,7 @@ export default function FleetPage() {
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[940px] text-sm">
+          <table className="w-full min-w-[1000px] text-sm">
             <thead>
               <tr className="border-b border-line text-left text-[11px] uppercase tracking-[0.1em] text-inkfaint">
                 <th className="px-4 py-3 font-semibold">Unit</th>
@@ -169,6 +169,9 @@ export default function FleetPage() {
                   Life <InfoTip title="Life used" formula="current hours ÷ life hours" align="right">Hover a unit's % for the resulting maintenance age factor.</InfoTip>
                 </th>
                 <th className="px-4 py-3 text-right font-semibold">Hrs/yr</th>
+                <th className="px-4 py-3 text-right font-semibold">
+                  Avail <InfoTip title="Availability" formula="mechanical availability 0–1; feeds the Quarry model" align="right" />
+                </th>
                 <th className="px-4 py-3 text-right font-semibold">
                   Op $/yr <InfoTip title="Operating cost / year" formula="(fuel + maint×ageFactor + operator) × hrs/yr" align="right" />
                 </th>
@@ -209,6 +212,10 @@ export default function FleetPage() {
                     <input type="number" value={u.annualHours} onChange={(e) => updateUnit(u.id, { annualHours: Number(e.target.value) })}
                       className="w-16 rounded-md border border-line bg-card px-1.5 py-0.5 text-right tabular text-ink focus:border-accent focus:outline-none" />
                   </td>
+                  <td className="px-4 py-2 text-right">
+                    <input type="number" step={0.01} value={u.availability} onChange={(e) => updateUnit(u.id, { availability: Number(e.target.value) })}
+                      className="w-14 rounded-md border border-line bg-card px-1.5 py-0.5 text-right tabular text-ink focus:border-accent focus:outline-none" />
+                  </td>
                   <td className="px-4 py-2 text-right tabular text-inksoft">{usdCompact(cost.operating)}</td>
                   <td className="px-4 py-2 text-right tabular font-semibold text-ink">{usdCompact(cost.total)}</td>
                   <td className="px-4 py-2">
@@ -228,7 +235,7 @@ export default function FleetPage() {
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-4 py-10 text-center text-inkfaint">
+                  <td colSpan={11} className="px-4 py-10 text-center text-inkfaint">
                     No units yet. Add one, or import a CSV.
                   </td>
                 </tr>
@@ -259,6 +266,7 @@ function AddUnitForm({ onClose, onAdd }: { onClose: () => void; onAdd: (u: Fleet
   const [year, setYear] = useState(2024);
   const [currentHours, setCurrentHours] = useState(0);
   const [annualHours, setAnnualHours] = useState(4000);
+  const [availability, setAvailability] = useState(0.85);
   const [site, setSite] = useState("");
 
   const handleClass = (id: string) => {
@@ -275,6 +283,7 @@ function AddUnitForm({ onClose, onAdd }: { onClose: () => void; onAdd: (u: Fleet
       year,
       currentHours,
       annualHours,
+      availability,
       site: site || "Unassigned",
       status: "active",
     });
@@ -303,6 +312,7 @@ function AddUnitForm({ onClose, onAdd }: { onClose: () => void; onAdd: (u: Fleet
         <NumberField label="Year" value={year} onChange={setYear} />
         <NumberField label="Current hours" value={currentHours} onChange={setCurrentHours} step={100} />
         <NumberField label="Hours / year" value={annualHours} onChange={setAnnualHours} step={100} />
+        <NumberField label="Availability" suffix="×" step={0.01} value={availability} onChange={setAvailability} />
         <div className="flex items-end gap-2">
           <Button onClick={submit}>Add</Button>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
