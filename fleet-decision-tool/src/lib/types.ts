@@ -111,7 +111,42 @@ export interface QuarryProduct {
   stockpileTons: number;
 }
 
-/** Full operating assumptions for one aggregates quarry. */
+/** A homogeneous set of haul trucks within a front (one size/brand). */
+export interface QuarryTruckGroup {
+  id: string;
+  /** Free label, e.g. "Cat 777" or "Komatsu HD785" */
+  label: string;
+  /** Size class (drives payload) */
+  classId: string;
+  count: number;
+  /** Mechanical availability for this group, 0..1 (brand/condition specific) */
+  availability: number;
+}
+
+/** A loading face / route. Each front has its own loader and (heterogeneous)
+ *  truck fleet, so each can have its own bottleneck. */
+export interface QuarryFront {
+  id: string;
+  name: string;
+  material: string;
+  /** Where this front delivers: the shared crusher, or straight to stockpile */
+  destination: "crusher" | "stockpile";
+  // Loading
+  loaderClassId: string;
+  loaderBucketTons: number;
+  loaderCycleSec: number;
+  bucketFillFactor: number;
+  loaderAvailability: number;
+  // Route
+  haulKm: number;
+  loadedSpeedKmh: number;
+  emptySpeedKmh: number;
+  spotDumpSec: number;
+  // Heterogeneous truck fleet
+  trucks: QuarryTruckGroup[];
+}
+
+/** Full operating assumptions for one aggregates quarry with multiple fronts. */
 export interface QuarryConfig {
   // Calendar / time
   shiftsPerDay: number;
@@ -119,36 +154,21 @@ export interface QuarryConfig {
   daysPerYear: number;
   /** Productive fraction of scheduled time (delays, blasting, shift change) */
   operatingEfficiency: number;
-  // Loading
-  loaderClassId: string;
-  nLoaders: number;
-  loaderCycleSec: number;
-  passesPerTruck: number;
-  bucketFillFactor: number;
-  // Hauling
-  truckClassId: string;
-  nTrucks: number;
-  haulKm: number;
-  loadedSpeedKmh: number;
-  emptySpeedKmh: number;
-  spotDumpSec: number;
-  truckAvailability: number;
-  // Crusher / plant
+  // Shared crusher / plant
   crusherRatedTph: number;
   crusherAvailability: number;
   kwhPerTon: number;
   energyPriceUsdKwh: number;
   linerCostPerTon: number;
   plantOtherPerTon: number;
-  // Other cost
   drillBlastCostPerTon: number;
-  // Targets & actuals
-  targetTonsYear: number;
-  /** Optional measured production; when set, used as the "real" side */
-  actualTonsYear?: number;
-  // Quality
+  /** Plant production target, tons per hour */
+  targetTph: number;
+  /** Contribution margin per ton, used to value lost production */
+  valuePerTon: number;
   outOfSpecPct: number;
-  // Products
+  // Fronts & products
+  fronts: QuarryFront[];
   products: QuarryProduct[];
 }
 

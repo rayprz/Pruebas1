@@ -17,6 +17,7 @@ import type { FleetUnit, Scenario } from "@/lib/types";
 import { BrandBadge } from "@/components/BrandBadge";
 import { IconPlus, IconTrash } from "@/components/Icons";
 import { ModuleIntro } from "@/components/ModuleIntro";
+import { InfoTip } from "@/components/InfoTip";
 import {
   Button,
   Card,
@@ -120,6 +121,14 @@ export default function FleetPage() {
         edit="Add/import units and edit their current hours, yearly hours, site and status. Import a CSV to load your whole fleet at once."
         output="Per-unit annual cost (age-adjusted operating + owning) and flags for machines nearing end of life."
         connects="Feeds CAPEX Planner (overhaul/replacement timing) and Sites & Production (current vs optimal fleet). Costs come from Catalog."
+        formulas={[
+          { label: "Life %", expr: "current hours ÷ life hours" },
+          { label: "Age factor", expr: "1 + 0.6 × (current hrs ÷ life)", note: "capped at 1.8; raises maintenance as a machine ages" },
+          { label: "Op $/yr", expr: "(fuel + maint×ageFactor + operator) × hrs/yr" },
+          { label: "Owning $/yr", expr: "deprec. + interest + insurance" },
+          { label: "Depreciation", expr: "(price×(1−salvage)) ÷ life × hrs/yr" },
+          { label: "Total $/yr", expr: "operating + owning" },
+        ]}
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -156,10 +165,16 @@ export default function FleetPage() {
                 <th className="px-4 py-3 font-semibold">Model</th>
                 <th className="px-4 py-3 font-semibold">Site</th>
                 <th className="px-4 py-3 text-right font-semibold">Hours</th>
-                <th className="px-4 py-3 text-right font-semibold">Life</th>
+                <th className="px-4 py-3 text-right font-semibold">
+                  Life <InfoTip title="Life used" formula="current hours ÷ life hours" align="right">Hover a unit's % for the resulting maintenance age factor.</InfoTip>
+                </th>
                 <th className="px-4 py-3 text-right font-semibold">Hrs/yr</th>
-                <th className="px-4 py-3 text-right font-semibold">Op $/yr</th>
-                <th className="px-4 py-3 text-right font-semibold">Total $/yr</th>
+                <th className="px-4 py-3 text-right font-semibold">
+                  Op $/yr <InfoTip title="Operating cost / year" formula="(fuel + maint×ageFactor + operator) × hrs/yr" align="right" />
+                </th>
+                <th className="px-4 py-3 text-right font-semibold">
+                  Total $/yr <InfoTip title="Total cost / year" formula="operating + owning (deprec.+interest+insurance)" align="right" />
+                </th>
                 <th className="px-4 py-3 font-semibold">Status</th>
                 <th className="px-4 py-3" />
               </tr>

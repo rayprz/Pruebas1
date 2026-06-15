@@ -15,7 +15,15 @@ import type { Brand, Category } from "@/lib/types";
 import { BrandBadge, EstimateBadge } from "@/components/BrandBadge";
 import { ParamsPanel } from "@/components/ParamsPanel";
 import { ModuleIntro } from "@/components/ModuleIntro";
+import { InfoTip } from "@/components/InfoTip";
 import { Card, PageHeader, Pill } from "@/components/ui";
+
+const FORMULAS = [
+  { label: "Fuel $/hr", expr: "gal/hr × diesel $/gal" },
+  { label: "Maintenance $/hr", expr: "base 2022 × escalation × brand factor" },
+  { label: "Operator $/hr", expr: "(base hrs×rate + OT hrs×OT rate)\n  × (1+benefits) ÷ weekly hrs" },
+  { label: "Total $/hr", expr: "fuel + maintenance + operator" },
+];
 
 const CATEGORIES = Object.keys(CATEGORY_LABELS) as Category[];
 
@@ -61,6 +69,7 @@ export default function CalculatorPage() {
         edit="The Parameters panel on the left: diesel price, operator wages, utilization and brand factors. Cost data per model lives in Catalog."
         output="Cost per hour split into fuel + maintenance + operator, per model — your benchmark for budgeting and bids."
         connects="Uses the editable Catalog data. The same engine powers Compare, My Fleet, CAPEX and Sites."
+        formulas={FORMULAS}
       />
 
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
@@ -101,10 +110,20 @@ export default function CalculatorPage() {
                   <tr className="border-b border-line text-left text-[11px] uppercase tracking-[0.1em] text-inkfaint">
                     <th className="px-4 py-3 font-semibold">Model</th>
                     <th className="px-4 py-3 font-semibold">Class</th>
-                    <th className="px-4 py-3 text-right font-semibold">Fuel gal/hr</th>
-                    {SCENARIOS.map((s) => (
+                    <th className="px-4 py-3 text-right font-semibold">
+                      Fuel gal/hr
+                      <InfoTip title="Fuel burn" formula="moderate–severe gal/hr (from Catalog)" align="right" />
+                    </th>
+                    {SCENARIOS.map((s, i) => (
                       <th key={s} className="px-4 py-3 text-right font-semibold">
                         {SCENARIO_LABELS[s]} $/hr
+                        <InfoTip
+                          title={`${SCENARIO_LABELS[s]} total $/hr`}
+                          formula="fuel + maintenance + operator"
+                          align="right"
+                        >
+                          {i === 1 ? "Average duty at the medium weekly schedule." : i === 0 ? "Moderate duty, low weekly hours." : "Severe duty, high weekly hours."}
+                        </InfoTip>
                       </th>
                     ))}
                   </tr>

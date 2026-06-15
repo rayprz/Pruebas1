@@ -17,6 +17,7 @@ import { useCatalog } from "@/lib/catalogStore";
 import { unitCapexEvents, usd, usdCompact, type CapexEvent } from "@/lib/engine";
 import { BrandBadge } from "@/components/BrandBadge";
 import { ModuleIntro } from "@/components/ModuleIntro";
+import { InfoTip } from "@/components/InfoTip";
 import { Card, PageHeader, SectionTitle, StatCard } from "@/components/ui";
 
 export default function CapexPage() {
@@ -78,6 +79,13 @@ export default function CapexPage() {
         edit="Nothing here directly — it derives from My Fleet (hours, utilization) and Catalog (price, life, overhaul interval & cost)."
         output="Annual CAPEX by year, the peak-spend year, and a unit-by-unit event schedule to take to finance."
         connects="Pulls units from My Fleet and economics from Catalog. Change a unit's hours or a class price and this updates."
+        formulas={[
+          { label: "Projected hours", expr: "current hours + annual hours × years ahead" },
+          { label: "Overhaul year", expr: "when projected hours cross a multiple of the overhaul interval" },
+          { label: "Overhaul cost", expr: "new price × overhaul %" },
+          { label: "Replacement year", expr: "when projected hours reach life hours" },
+          { label: "Replacement cost", expr: "new price (full)" },
+        ]}
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -115,9 +123,15 @@ export default function CapexPage() {
                 <th className="px-4 py-3 font-semibold">Year</th>
                 <th className="px-4 py-3 font-semibold">Unit</th>
                 <th className="px-4 py-3 font-semibold">Model</th>
-                <th className="px-4 py-3 font-semibold">Event</th>
-                <th className="px-4 py-3 text-right font-semibold">Hours at event</th>
-                <th className="px-4 py-3 text-right font-semibold">Cost</th>
+                <th className="px-4 py-3 font-semibold">
+                  Event <InfoTip title="Event type" formula="overhaul at each interval; replacement at life hours" align="left" />
+                </th>
+                <th className="px-4 py-3 text-right font-semibold">
+                  Hours at event <InfoTip title="Hours at event" formula="current + annual hours × years ahead" align="right" />
+                </th>
+                <th className="px-4 py-3 text-right font-semibold">
+                  Cost <InfoTip title="Event cost" formula="overhaul = price × overhaul %; replacement = new price" align="right" />
+                </th>
               </tr>
             </thead>
             <tbody>

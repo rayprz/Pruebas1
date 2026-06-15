@@ -90,6 +90,11 @@ export default function ComparePage() {
         edit="Pick machines from the class list below and the duty scenario at the top. Underlying costs are edited in Catalog and Parameters."
         output="A stacked bar of fuel/maintenance/operator per hour, plus annualized totals — to choose between brands or sizes."
         connects="Reads the same Catalog and Parameters as every other module, so a change there updates this instantly."
+        formulas={[
+          { label: "Bar segments", expr: "fuel + maintenance + operator = $/hr" },
+          { label: "Annualized", expr: "$/hr × (weekly hrs × 52)" },
+          { label: "Maintenance", expr: "base 2022 × escalation × brand factor" },
+        ]}
       />
 
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">

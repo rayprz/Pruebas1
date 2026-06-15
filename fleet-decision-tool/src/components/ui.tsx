@@ -46,7 +46,7 @@ export function StatCard({
   sub,
   tone = "ink",
 }: {
-  label: string;
+  label: ReactNode;
   value: ReactNode;
   sub?: ReactNode;
   tone?: "ink" | "accent" | "olive" | "danger" | "gold";

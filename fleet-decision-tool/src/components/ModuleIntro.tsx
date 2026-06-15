@@ -10,12 +10,15 @@ export function ModuleIntro({
   edit,
   output,
   connects,
+  formulas,
 }: {
   id: string;
   purpose: ReactNode;
   edit: ReactNode;
   output: ReactNode;
   connects: ReactNode;
+  /** Optional list of the key calculations behind this module's numbers. */
+  formulas?: { label: string; expr: string; note?: string }[];
 }) {
   const key = `fleet-tool-intro-${id}`;
   const [open, setOpen] = useState(true);
@@ -53,12 +56,32 @@ export function ModuleIntro({
         <span className="text-xs text-inksoft">{open ? "Hide" : "Show"}</span>
       </button>
       {open && (
-        <div className="mt-3 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-          <Block label="What it is" tone="ink">{purpose}</Block>
-          <Block label="What you edit" tone="accent">{edit}</Block>
-          <Block label="What you get" tone="olive">{output}</Block>
-          <Block label="How it connects" tone="blue">{connects}</Block>
-        </div>
+        <>
+          <div className="mt-3 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+            <Block label="What it is" tone="ink">{purpose}</Block>
+            <Block label="What you edit" tone="accent">{edit}</Block>
+            <Block label="What you get" tone="olive">{output}</Block>
+            <Block label="How it connects" tone="blue">{connects}</Block>
+          </div>
+          {formulas && formulas.length > 0 && (
+            <div className="mt-3 border-t border-line/70 pt-3">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-inkfaint">
+                How the numbers are calculated
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {formulas.map((f) => (
+                  <div key={f.label} className="rounded-lg border border-line bg-card/70 p-2">
+                    <p className="text-xs font-medium text-ink">{f.label}</p>
+                    <code className="mt-1 block whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-accentink">
+                      {f.expr}
+                    </code>
+                    {f.note && <p className="mt-1 text-[11px] text-inkfaint">{f.note}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

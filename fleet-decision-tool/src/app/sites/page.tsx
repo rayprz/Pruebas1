@@ -13,6 +13,7 @@ import { useCatalog } from "@/lib/catalogStore";
 import { useFleet } from "@/lib/fleetStore";
 import type { Category } from "@/lib/types";
 import { ModuleIntro } from "@/components/ModuleIntro";
+import { InfoTip } from "@/components/InfoTip";
 import {
   Card,
   NumberField,
@@ -111,13 +112,20 @@ export default function SitesPage() {
         edit="Per site: production tons/yr, haul distance, and the loader/truck classes. Plus the global hrs/yr and trucks-per-loader assumptions."
         output="Recommended trucks & loaders vs. what you actually assign, and the resulting 'excess OPEX' per site and overall."
         connects="Reads assigned units from My Fleet (match by site name) and costs from Catalog. Rename a site to match unit 'site' values."
+        formulas={[
+          { label: "Truck cycle (min)", expr: "fixed + 2 × haul km ÷ speed × 60" },
+          { label: "Tons/truck/yr", expr: "payload × (60÷cycle) × 82% avail × 83% eff × hrs/yr" },
+          { label: "Trucks needed", expr: "ceil(production ÷ tons per truck per yr)" },
+          { label: "Loaders needed", expr: "ceil(trucks ÷ trucks-per-loader)" },
+          { label: "Excess OPEX", expr: "current operating − optimal operating" },
+        ]}
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Required production" value={`${(totals.production / 1e6).toFixed(2)}M`} sub="short tons / year" />
         <StatCard label="Recommended fleet" value={`${totals.recTrucks} + ${totals.recLoaders}`} sub="trucks + loaders" />
         <StatCard
-          label="Excess OPEX / yr"
+          label={<>Excess OPEX / yr <InfoTip title="Excess OPEX" formula="Σ (current operating − optimal operating) per site" align="left" /></>}
           value={usdCompact(Math.max(0, totals.excess))}
           sub={totals.excess >= 0 ? "vs right-sized fleet" : "running leaner than optimal"}
           tone={totals.excess > 0 ? "danger" : "olive"}
@@ -196,9 +204,9 @@ export default function SitesPage() {
             </div>
 
             <div className="mt-4 grid grid-cols-3 gap-3 border-t border-line pt-3 text-sm">
-              <Metric label="Cycle time" value={`${sizing.cycleMin.toFixed(1)} min`} />
-              <Metric label="Optimal OPEX/yr" value={usdCompact(optimalOpex)} />
-              <Metric label="Current OPEX/yr" value={usdCompact(currentOpex)} />
+              <Metric label="Cycle time" value={`${sizing.cycleMin.toFixed(1)} min`} tip={<InfoTip title="Truck cycle" formula="fixed + 2 × haul km ÷ speed × 60" align="left" />} />
+              <Metric label="Optimal OPEX/yr" value={usdCompact(optimalOpex)} tip={<InfoTip title="Optimal OPEX" formula="recommended units × new-unit operating $/yr" align="left" />} />
+              <Metric label="Current OPEX/yr" value={usdCompact(currentOpex)} tip={<InfoTip title="Current OPEX" formula="Σ operating $/yr of units assigned to this site" align="left" />} />
             </div>
           </Card>
         ))}
@@ -224,10 +232,10 @@ function Row({ label, value, mismatch }: { label: string; value: string; mismatc
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({ label, value, tip }: { label: string; value: string; tip?: React.ReactNode }) {
   return (
     <div>
-      <p className="text-[11px] uppercase tracking-[0.1em] text-inkfaint">{label}</p>
+      <p className="text-[11px] uppercase tracking-[0.1em] text-inkfaint">{label}{tip}</p>
       <p className="tabular font-semibold text-ink">{value}</p>
     </div>
   );
