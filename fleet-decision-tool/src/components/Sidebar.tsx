@@ -9,6 +9,7 @@ import {
   IconCompare,
   IconDashboard,
   IconQuarry,
+  IconSettings,
   IconSites,
   IconTruck,
 } from "./Icons";
@@ -22,6 +23,7 @@ const GROUPS: {
     items: [
       { href: "/dashboard", label: "Executive Dashboard", Icon: IconDashboard },
       { href: "/compare-quarries", label: "Compare Quarries", Icon: IconQuarry },
+      { href: "/quarries", label: "Manage Quarries", Icon: IconSettings },
     ],
   },
   {

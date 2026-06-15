@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Bar,
@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { usd, usdCompact } from "@/lib/engine";
 import { BASE_YEAR, CAPEX_HORIZON, useFleet } from "@/lib/fleetStore";
-import { quarryMetrics } from "@/lib/rollup";
+import { quarryMetrics, type QuarryMetrics } from "@/lib/rollup";
 import { useParams } from "@/lib/store";
 import { useCatalog } from "@/lib/catalogStore";
 import { useQuarry } from "@/lib/quarryStore";
@@ -70,6 +70,27 @@ export default function DashboardPage() {
     return { operating, owning, capex, excess, losses, attainment, unitCount, byYear, topLosses, aging, nearEol };
   }, [metrics]);
 
+  // Region subtotals for the By-quarry rollup
+  const byRegion = useMemo(() => {
+    const m = new Map<string, QuarryMetrics[]>();
+    for (const x of metrics) {
+      const l = m.get(x.quarry.region) ?? [];
+      l.push(x);
+      m.set(x.quarry.region, l);
+    }
+    return [...m.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([region, list]) => ({
+        region,
+        list,
+        operating: list.reduce((s, x) => s + x.operating, 0),
+        excess: list.reduce((s, x) => s + x.excess, 0),
+        losses: list.reduce((s, x) => s + x.lossesUsd, 0),
+        systemTph: list.reduce((s, x) => s + x.systemTph, 0),
+        attainment: list.length ? list.reduce((s, x) => s + x.attainment, 0) / list.length : 0,
+      }));
+  }, [metrics]);
+
   return (
     <div>
       <PageHeader
@@ -108,18 +129,39 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {metrics.map((m) => (
-                <tr key={m.quarry.id} className="border-b border-line/60 last:border-0 hover:bg-panel/50">
-                  <td className="px-5 py-2 font-medium text-ink">{m.quarry.name}</td>
-                  <td className="px-3 py-2 text-inksoft">{m.quarry.region}</td>
-                  <td className="px-3 py-2 text-right tabular text-inksoft">{Math.round(m.systemTph).toLocaleString()}</td>
-                  <td className={`px-3 py-2 text-right tabular font-medium ${m.attainment >= 0.9 ? "text-olive" : m.attainment >= 0.75 ? "text-gold" : "text-danger"}`}>{(m.attainment * 100).toFixed(0)}%</td>
-                  <td className="px-3 py-2 text-right tabular text-inksoft">{usd(m.costPerTon, 2)}</td>
-                  <td className="px-3 py-2 text-right tabular text-inksoft">{usdCompact(m.operating)}</td>
-                  <td className={`px-3 py-2 text-right tabular ${m.excess > 0 ? "text-danger" : "text-olive"}`}>{usdCompact(Math.max(0, m.excess))}</td>
-                  <td className="px-3 py-2 text-right tabular text-danger">{usdCompact(m.lossesUsd)}</td>
-                </tr>
+              {byRegion.map((rg) => (
+                <Fragment key={rg.region}>
+                  <tr className="border-b border-line bg-panel/40 text-[11px] uppercase tracking-[0.1em] text-inksoft">
+                    <td className="px-5 py-1.5 font-semibold" colSpan={2}>Región {rg.region}</td>
+                    <td className="px-3 py-1.5 text-right tabular">{Math.round(rg.systemTph).toLocaleString()}</td>
+                    <td className="px-3 py-1.5 text-right tabular">{(rg.attainment * 100).toFixed(0)}%</td>
+                    <td className="px-3 py-1.5" />
+                    <td className="px-3 py-1.5 text-right tabular">{usdCompact(rg.operating)}</td>
+                    <td className="px-3 py-1.5 text-right tabular">{usdCompact(Math.max(0, rg.excess))}</td>
+                    <td className="px-3 py-1.5 text-right tabular">{usdCompact(rg.losses)}</td>
+                  </tr>
+                  {rg.list.map((m) => (
+                    <tr key={m.quarry.id} className="border-b border-line/60 hover:bg-panel/50">
+                      <td className="px-5 py-2 pl-8 font-medium text-ink">{m.quarry.name}</td>
+                      <td className="px-3 py-2 text-inksoft">{m.quarry.region}</td>
+                      <td className="px-3 py-2 text-right tabular text-inksoft">{Math.round(m.systemTph).toLocaleString()}</td>
+                      <td className={`px-3 py-2 text-right tabular font-medium ${m.attainment >= 0.9 ? "text-olive" : m.attainment >= 0.75 ? "text-gold" : "text-danger"}`}>{(m.attainment * 100).toFixed(0)}%</td>
+                      <td className="px-3 py-2 text-right tabular text-inksoft">{usd(m.costPerTon, 2)}</td>
+                      <td className="px-3 py-2 text-right tabular text-inksoft">{usdCompact(m.operating)}</td>
+                      <td className={`px-3 py-2 text-right tabular ${m.excess > 0 ? "text-danger" : "text-olive"}`}>{usdCompact(Math.max(0, m.excess))}</td>
+                      <td className="px-3 py-2 text-right tabular text-danger">{usdCompact(m.lossesUsd)}</td>
+                    </tr>
+                  ))}
+                </Fragment>
               ))}
+              {byRegion.length > 1 && (
+                <tr className="border-t-2 border-line-strong font-semibold text-ink">
+                  <td className="px-5 py-2" colSpan={5}>All quarries</td>
+                  <td className="px-3 py-2 text-right tabular">{usdCompact(agg.operating)}</td>
+                  <td className="px-3 py-2 text-right tabular">{usdCompact(Math.max(0, agg.excess))}</td>
+                  <td className="px-3 py-2 text-right tabular text-danger">{usdCompact(agg.losses)}</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
