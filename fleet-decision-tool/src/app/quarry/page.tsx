@@ -22,12 +22,13 @@ import { useMaint } from "@/lib/maintStore";
 import { useShiftLog } from "@/lib/shiftStore";
 import { actualMaintPerHrByUnit, actualAvailabilityByUnit } from "@/lib/maintLog";
 import { useFleetHistory } from "@/lib/fleetHistoryStore";
-import { usePeriod, monthsInPeriod } from "@/lib/periodStore";
+import { usePeriod, resolveMonths } from "@/lib/periodStore";
 import { kpiHistory, KPI_DEFS, aggKpi } from "@/lib/history";
 import type { Category, FleetUnit, QuarryFront } from "@/lib/types";
 import { ModuleIntro } from "@/components/ModuleIntro";
 import { MiniTrend } from "@/components/MiniTrend";
 import { InfoTip } from "@/components/InfoTip";
+import { useSort, SortHeader } from "@/components/Sortable";
 import { QuarryActuals } from "@/components/QuarryActuals";
 import { IconPlus, IconTrash } from "@/components/Icons";
 import {
@@ -93,7 +94,7 @@ export default function QuarryPage() {
   );
 
   const trends = useMemo(() => {
-    const months = monthsInPeriod([...new Set(fleetMonths.map((m) => m.month))], period);
+    const months = resolveMonths([...new Set(fleetMonths.map((m) => m.month))], period);
     const hist = kpiHistory(months, [active], units, fleetMonths, shiftRecords, maintRecords, classById, params);
     const point = (key: string) => {
       const def = KPI_DEFS.find((d) => d.key === key)!;
@@ -101,6 +102,21 @@ export default function QuarryPage() {
     };
     return { systemTph: point("systemTph"), costPerTon: point("costPerTon"), maintPerTon: point("maintPerTon") };
   }, [active, units, fleetMonths, period, shiftRecords, maintRecords, classById, params]);
+
+  type Product = (typeof r.products)[number];
+  const productAccessors = useMemo(
+    () => ({
+      name: (p: Product) => p.name,
+      mixPct: (p: Product) => p.mixPct,
+      productionTons: (p: Product) => p.productionTons,
+      demandTonsYear: (p: Product) => p.demandTonsYear,
+      balance: (p: Product) => p.balance,
+      stockpileTons: (p: Product) => p.stockpileTons,
+      daysCover: (p: Product) => p.daysCover,
+    }),
+    []
+  );
+  const { sorted: sortedProducts, state: prodState, toggle: prodToggle } = useSort(r.products, productAccessors);
 
   const loaderOptions = classes.filter((c) => LOADER_CATS.includes(c.category)).map((c) => ({ value: c.id, label: c.name }));
 
@@ -140,11 +156,18 @@ export default function QuarryPage() {
     <div>
       <PageHeader
         title="Quarry Performance"
-        subtitle={`${active.name} · ${active.region} — multi-front load–haul–crush model for the daily ops meeting. Switch quarry from the top bar.`}
+        subtitle={`${active.name} · ${active.region} — multi-front load–haul–crush model for the daily ops meeting.`}
         actions={
-          <button onClick={q.reset} className="text-xs text-inkfaint underline-offset-2 hover:text-ink hover:underline">
-            Reset assumptions
-          </button>
+          <>
+            <Select
+              value={q.activeQuarryId}
+              onChange={q.setActiveQuarry}
+              options={q.quarries.map((qq) => ({ value: qq.id, label: `${qq.name} · ${qq.region}` }))}
+            />
+            <button onClick={q.reset} className="text-xs text-inkfaint underline-offset-2 hover:text-ink hover:underline">
+              Reset assumptions
+            </button>
+          </>
         }
       />
 
@@ -358,17 +381,17 @@ export default function QuarryPage() {
           <table className="w-full min-w-[760px] text-sm">
             <thead>
               <tr className="border-b border-line text-left text-[11px] uppercase tracking-[0.1em] text-inkfaint">
-                <th className="px-4 py-3 font-semibold">Product</th>
-                <th className="px-4 py-3 text-right font-semibold">Mix %</th>
-                <th className="px-4 py-3 text-right font-semibold">Production <InfoTip title="Production" formula="annual tons × mix %" align="right" /></th>
-                <th className="px-4 py-3 text-right font-semibold">Demand</th>
-                <th className="px-4 py-3 text-right font-semibold">Balance <InfoTip title="Balance" formula="production − demand" align="right" /></th>
-                <th className="px-4 py-3 text-right font-semibold">Stockpile</th>
-                <th className="px-4 py-3 text-right font-semibold">Days cover <InfoTip title="Days cover" formula="stockpile ÷ (demand ÷ 365)" align="right" /></th>
+                <SortHeader label="Product" sortKey="name" state={prodState} onSort={prodToggle} className="px-4 py-3" />
+                <SortHeader label="Mix %" sortKey="mixPct" state={prodState} onSort={prodToggle} align="right" className="px-4 py-3" />
+                <SortHeader label="Production" sortKey="productionTons" state={prodState} onSort={prodToggle} align="right" className="px-4 py-3"><InfoTip title="Production" formula="annual tons × mix %" align="right" /></SortHeader>
+                <SortHeader label="Demand" sortKey="demandTonsYear" state={prodState} onSort={prodToggle} align="right" className="px-4 py-3" />
+                <SortHeader label="Balance" sortKey="balance" state={prodState} onSort={prodToggle} align="right" className="px-4 py-3"><InfoTip title="Balance" formula="production − demand" align="right" /></SortHeader>
+                <SortHeader label="Stockpile" sortKey="stockpileTons" state={prodState} onSort={prodToggle} align="right" className="px-4 py-3" />
+                <SortHeader label="Days cover" sortKey="daysCover" state={prodState} onSort={prodToggle} align="right" className="px-4 py-3"><InfoTip title="Days cover" formula="stockpile ÷ (demand ÷ 365)" align="right" /></SortHeader>
               </tr>
             </thead>
             <tbody>
-              {r.products.map((p) => (
+              {sortedProducts.map((p) => (
                 <tr key={p.id} className="border-b border-line/60 last:border-0 hover:bg-panel/50">
                   <td className="px-4 py-2 font-medium text-ink">
                     {p.name}

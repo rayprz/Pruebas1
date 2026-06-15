@@ -13,7 +13,7 @@ import { useCatalog } from "@/lib/catalogStore";
 import { useFleet } from "@/lib/fleetStore";
 import { useQuarry } from "@/lib/quarryStore";
 import { useFleetHistory } from "@/lib/fleetHistoryStore";
-import { usePeriod, monthsInPeriod } from "@/lib/periodStore";
+import { usePeriod, resolveMonths } from "@/lib/periodStore";
 import { unitAt } from "@/lib/history";
 import type { Category, FleetMonth } from "@/lib/types";
 import { ModuleIntro } from "@/components/ModuleIntro";
@@ -39,7 +39,7 @@ export default function SitesPage() {
   const { params } = useParams();
   const { classes, classById } = useCatalog();
   const { units } = useFleet();
-  const { quarries, updateQuarry } = useQuarry();
+  const { selectedQuarries: quarries, updateQuarry } = useQuarry();
   const { months: fleetMonths } = useFleetHistory();
   const { period } = usePeriod();
   const [annualHoursPerUnit, setAnnualHoursPerUnit] = useState(5000);
@@ -111,10 +111,12 @@ export default function SitesPage() {
   // assigned fleet ages, so excess OPEX moves with the fleet's meter history.
   const optimalTotal = useMemo(() => analysis.reduce((s, a) => s + a.optimalOpex, 0), [analysis]);
   const excessTrend = useMemo(() => {
-    const months = monthsInPeriod([...new Set(fleetMonths.map((m) => m.month))], period);
+    const months = resolveMonths([...new Set(fleetMonths.map((m) => m.month))], period);
     const fmByKey = new Map<string, FleetMonth>(fleetMonths.map((m) => [`${m.unitId}|${m.month}`, m]));
+    const siteIds = new Set(quarries.map((q) => q.id));
     return months.map((month) => {
       const current = units.reduce((s, u) => {
+        if (!siteIds.has(u.quarryId)) return s;
         const c = classById.get(u.classId);
         if (!c) return s;
         const m = modelById.get(u.modelId) ?? refModel(u.classId);
@@ -122,7 +124,7 @@ export default function SitesPage() {
       }, 0);
       return { month, value: Math.max(0, current - optimalTotal) };
     });
-  }, [fleetMonths, period, units, classById, modelById, params, optimalTotal]);
+  }, [fleetMonths, period, units, classById, modelById, params, optimalTotal, quarries]);
 
   return (
     <div>

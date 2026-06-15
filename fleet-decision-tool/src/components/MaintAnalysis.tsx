@@ -26,6 +26,7 @@ import { unitMaint, bySubsystem, quarryMaint } from "@/lib/maintLog";
 import type { EquivalenceClass, FleetUnit, GlobalParams, MaintRecord, Quarry } from "@/lib/types";
 import { InfoTip } from "@/components/InfoTip";
 import { BrandBadge } from "@/components/BrandBadge";
+import { useSort, SortHeader } from "@/components/Sortable";
 import { Card, SectionTitle, Select } from "@/components/ui";
 
 const PALETTE = ["#b06a3c", "#6f7548", "#5b7c8a", "#c08a44", "#b07a8c", "#8a8c5a"];
@@ -89,6 +90,24 @@ export function MaintAnalysis({
       .sort((a, b) => b.perHour - a.perHour);
   }, [classId, scope, units, um, classById, modelById, params]);
 
+  type Row = (typeof rows)[number];
+  const rowAccessors = useMemo(
+    () => ({
+      unit: (r: Row) => r.unit.unitNo,
+      model: (r: Row) => r.model?.model ?? "",
+      quarry: (r: Row) => quarryName.get(r.unit.quarryId) ?? "",
+      perHour: (r: Row) => r.perHour,
+      benchmark: (r: Row) => r.benchmark,
+      vsBenchmark: (r: Row) => r.vsBenchmark,
+      scheduledPct: (r: Row) => r.scheduledPct,
+      mtbf: (r: Row) => r.mtbf,
+      availability: (r: Row) => r.availability,
+      totalCost: (r: Row) => r.totalCost,
+    }),
+    [quarryName]
+  );
+  const { sorted: sortedRows, state: rowState, toggle: rowToggle } = useSort(rows, rowAccessors, { key: "perHour", dir: "desc" });
+
   const unitIds = useMemo(() => new Set(rows.map((r) => r.unit.id)), [rows]);
 
   // Actual vs benchmark $/hr by unit
@@ -130,6 +149,20 @@ export function MaintAnalysis({
     .map((q) => ({ q, m: qmaint.get(q.id) }))
     .filter((x): x is { q: Quarry; m: NonNullable<ReturnType<typeof qmaint.get>> } => !!x.m);
 
+  type QRow = (typeof qRows)[number];
+  const qAccessors = useMemo(
+    () => ({
+      name: (x: QRow) => x.q.name,
+      region: (x: QRow) => x.q.region,
+      units: (x: QRow) => x.m.unitsWithData,
+      annualizedCost: (x: QRow) => x.m.annualizedCost,
+      perTon: (x: QRow) => x.m.perTon,
+      availability: (x: QRow) => x.m.availability,
+    }),
+    []
+  );
+  const { sorted: sortedQRows, state: qState, toggle: qToggle } = useSort(qRows, qAccessors, { key: "perTon", dir: "desc" });
+
   const flags = rows.filter((r) => r.vsBenchmark > 1.15);
 
   if (classesWithData.length === 0) {
@@ -154,20 +187,20 @@ export function MaintAnalysis({
           <table className="w-full min-w-[760px] text-sm">
             <thead>
               <tr className="border-b border-line text-left text-[11px] uppercase tracking-[0.1em] text-inkfaint">
-                <th className="px-5 py-3 font-semibold">Unit</th>
-                <th className="px-3 py-3 font-semibold">Brand / model</th>
-                <th className="px-3 py-3 font-semibold">Quarry</th>
-                <th className="px-3 py-3 text-right font-semibold">$/hr</th>
-                <th className="px-3 py-3 text-right font-semibold">Benchmark</th>
-                <th className="px-3 py-3 text-right font-semibold">vs Bm</th>
-                <th className="px-3 py-3 text-right font-semibold">Sched%</th>
-                <th className="px-3 py-3 text-right font-semibold">MTBF <InfoTip title="Mean time between failures" formula="operating hours ÷ # corrective events" align="right" /></th>
-                <th className="px-3 py-3 text-right font-semibold">Avail <InfoTip title="Reliability availability" formula="uptime ÷ (uptime + corrective downtime)" align="right" /></th>
-                <th className="px-3 py-3 text-right font-semibold">Total $</th>
+                <SortHeader label="Unit" sortKey="unit" state={rowState} onSort={rowToggle} className="px-5 py-3" />
+                <SortHeader label="Brand / model" sortKey="model" state={rowState} onSort={rowToggle} className="px-3 py-3" />
+                <SortHeader label="Quarry" sortKey="quarry" state={rowState} onSort={rowToggle} className="px-3 py-3" />
+                <SortHeader label="$/hr" sortKey="perHour" state={rowState} onSort={rowToggle} align="right" className="px-3 py-3" />
+                <SortHeader label="Benchmark" sortKey="benchmark" state={rowState} onSort={rowToggle} align="right" className="px-3 py-3" />
+                <SortHeader label="vs Bm" sortKey="vsBenchmark" state={rowState} onSort={rowToggle} align="right" className="px-3 py-3" />
+                <SortHeader label="Sched%" sortKey="scheduledPct" state={rowState} onSort={rowToggle} align="right" className="px-3 py-3" />
+                <SortHeader label="MTBF" sortKey="mtbf" state={rowState} onSort={rowToggle} align="right" className="px-3 py-3"><InfoTip title="Mean time between failures" formula="operating hours ÷ # corrective events" align="right" /></SortHeader>
+                <SortHeader label="Avail" sortKey="availability" state={rowState} onSort={rowToggle} align="right" className="px-3 py-3"><InfoTip title="Reliability availability" formula="uptime ÷ (uptime + corrective downtime)" align="right" /></SortHeader>
+                <SortHeader label="Total $" sortKey="totalCost" state={rowState} onSort={rowToggle} align="right" className="px-3 py-3" />
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {sortedRows.map((r) => (
                 <tr key={r.unit.id} className="border-b border-line/60 last:border-0 hover:bg-panel/50">
                   <td className="px-5 py-2 font-medium text-ink">{r.unit.unitNo}</td>
                   <td className="px-3 py-2">{r.model ? <span className="flex items-center gap-1.5"><BrandBadge brand={r.model.brand} /><span className="text-inksoft">{r.model.model}</span></span> : "—"}</td>
@@ -233,16 +266,16 @@ export function MaintAnalysis({
           <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="border-b border-line text-left text-[11px] uppercase tracking-[0.1em] text-inkfaint">
-                <th className="px-5 py-3 font-semibold">Quarry</th>
-                <th className="px-3 py-3 font-semibold">Region</th>
-                <th className="px-3 py-3 text-right font-semibold">Units</th>
-                <th className="px-3 py-3 text-right font-semibold">Annualized $</th>
-                <th className="px-3 py-3 text-right font-semibold">$/ton</th>
-                <th className="px-3 py-3 text-right font-semibold">Availability</th>
+                <SortHeader label="Quarry" sortKey="name" state={qState} onSort={qToggle} className="px-5 py-3" />
+                <SortHeader label="Region" sortKey="region" state={qState} onSort={qToggle} className="px-3 py-3" />
+                <SortHeader label="Units" sortKey="units" state={qState} onSort={qToggle} align="right" className="px-3 py-3" />
+                <SortHeader label="Annualized $" sortKey="annualizedCost" state={qState} onSort={qToggle} align="right" className="px-3 py-3" />
+                <SortHeader label="$/ton" sortKey="perTon" state={qState} onSort={qToggle} align="right" className="px-3 py-3" />
+                <SortHeader label="Availability" sortKey="availability" state={qState} onSort={qToggle} align="right" className="px-3 py-3" />
               </tr>
             </thead>
             <tbody>
-              {qRows.map(({ q, m }) => (
+              {sortedQRows.map(({ q, m }) => (
                 <tr key={q.id} className="border-b border-line/60 last:border-0 hover:bg-panel/50">
                   <td className="px-5 py-2 font-medium text-ink">{q.name}</td>
                   <td className="px-3 py-2 text-inksoft">{q.region}</td>

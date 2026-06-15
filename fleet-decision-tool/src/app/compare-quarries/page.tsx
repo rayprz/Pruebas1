@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   Bar,
   BarChart,
@@ -22,20 +22,18 @@ import { useShiftLog } from "@/lib/shiftStore";
 import { useMaint } from "@/lib/maintStore";
 import { ModuleIntro } from "@/components/ModuleIntro";
 import { InfoTip } from "@/components/InfoTip";
-import { Card, PageHeader, SectionTitle, Select } from "@/components/ui";
+import { useSort, SortHeader } from "@/components/Sortable";
+import { Card, PageHeader, SectionTitle } from "@/components/ui";
 
 const pct = (n: number) => `${(n * 100).toFixed(0)}%`;
-
-type SortKey = "region" | "systemTph" | "attainment" | "costPerTon" | "lossesUsd" | "excess";
 
 export default function CompareQuarriesPage() {
   const { params } = useParams();
   const { classById } = useCatalog();
   const { units } = useFleet();
-  const { quarries } = useQuarry();
+  const { selectedQuarries: quarries } = useQuarry();
   const { records } = useShiftLog();
   const { records: maintRecords } = useMaint();
-  const [sortBy, setSortBy] = useState<SortKey>("region");
 
   const maintByUnit = useMemo(
     () => (params.useActualMaint ? actualMaintPerHrByUnit(maintRecords) : undefined),
@@ -51,18 +49,24 @@ export default function CompareQuarriesPage() {
     [quarries, units, records, classById, params, maintByUnit, availByUnit]
   );
 
-  const sorted = useMemo(() => {
-    const arr = [...metrics];
-    const cmp: Record<SortKey, (a: QuarryMetrics, b: QuarryMetrics) => number> = {
-      region: (a, b) => a.quarry.region.localeCompare(b.quarry.region) || a.quarry.name.localeCompare(b.quarry.name),
-      systemTph: (a, b) => b.systemTph - a.systemTph,
-      attainment: (a, b) => b.attainment - a.attainment,
-      costPerTon: (a, b) => a.costPerTon - b.costPerTon,
-      lossesUsd: (a, b) => b.lossesUsd - a.lossesUsd,
-      excess: (a, b) => b.excess - a.excess,
-    };
-    return arr.sort(cmp[sortBy]);
-  }, [metrics, sortBy]);
+  const accessors = useMemo(
+    () => ({
+      name: (m: QuarryMetrics) => m.quarry.name,
+      region: (m: QuarryMetrics) => m.quarry.region,
+      systemTph: (m: QuarryMetrics) => m.systemTph,
+      planAttainment: (m: QuarryMetrics) => m.planAttainment,
+      attainment: (m: QuarryMetrics) => m.attainment,
+      costPerTon: (m: QuarryMetrics) => m.costPerTon,
+      fuelGalPerTon: (m: QuarryMetrics) => m.fuelGalPerTon,
+      kwhPerTon: (m: QuarryMetrics) => m.kwhPerTon,
+      oee: (m: QuarryMetrics) => m.oee,
+      avgAvailability: (m: QuarryMetrics) => m.avgAvailability,
+      lossesUsd: (m: QuarryMetrics) => m.lossesUsd,
+      excess: (m: QuarryMetrics) => m.excess,
+    }),
+    []
+  );
+  const { sorted, state, toggle } = useSort(metrics, accessors, { key: "region", dir: "asc" });
 
   const chart = (sel: (m: QuarryMetrics) => number, round = 0) =>
     metrics.map((m) => ({ name: m.quarry.name, value: Number(sel(m).toFixed(round)) }));
@@ -71,21 +75,7 @@ export default function CompareQuarriesPage() {
     <div>
       <PageHeader
         title="Compare Quarries"
-        subtitle="Every quarry side-by-side for the VP of Aggregates — throughput, cost, OEE and the money on the table."
-        actions={
-          <Select
-            value={sortBy}
-            onChange={(v) => setSortBy(v as SortKey)}
-            options={[
-              { value: "region", label: "Sort: Region" },
-              { value: "systemTph", label: "Sort: Throughput" },
-              { value: "attainment", label: "Sort: Attainment" },
-              { value: "costPerTon", label: "Sort: Cost/ton" },
-              { value: "lossesUsd", label: "Sort: Losses" },
-              { value: "excess", label: "Sort: Excess OPEX" },
-            ]}
-          />
-        }
+        subtitle="Every quarry side-by-side for the VP of Aggregates — click any column to sort. Throughput, cost, OEE and the money on the table."
       />
 
       <ModuleIntro
@@ -101,18 +91,18 @@ export default function CompareQuarriesPage() {
           <table className="w-full min-w-[1080px] text-sm">
             <thead>
               <tr className="border-b border-line text-left text-[11px] uppercase tracking-[0.1em] text-inkfaint">
-                <th className="px-4 py-3 font-semibold">Quarry</th>
-                <th className="px-3 py-3 font-semibold">Region</th>
-                <th className="px-3 py-3 text-right font-semibold">tph <InfoTip title="System throughput" formula="min(Σ crusher fronts, crusher cap) + Σ stockpile fronts" align="right" /></th>
-                <th className="px-3 py-3 text-right font-semibold">Plan</th>
-                <th className="px-3 py-3 text-right font-semibold">Actual <InfoTip title="Actual attainment" formula="Σ tons ÷ (target tph × scheduled hrs), avg of shifts" align="right" /></th>
-                <th className="px-3 py-3 text-right font-semibold">$/ton</th>
-                <th className="px-3 py-3 text-right font-semibold">gal/t</th>
-                <th className="px-3 py-3 text-right font-semibold">kWh/t</th>
-                <th className="px-3 py-3 text-right font-semibold">OEE <InfoTip title="Crusher OEE" formula="availability × utilization × quality" align="right" /></th>
-                <th className="px-3 py-3 text-right font-semibold">Avail</th>
-                <th className="px-3 py-3 text-right font-semibold">Losses/yr</th>
-                <th className="px-3 py-3 text-right font-semibold">Excess/yr</th>
+                <SortHeader label="Quarry" sortKey="name" state={state} onSort={toggle} className="px-4 py-3" />
+                <SortHeader label="Region" sortKey="region" state={state} onSort={toggle} className="px-3 py-3" />
+                <SortHeader label="tph" sortKey="systemTph" state={state} onSort={toggle} align="right" className="px-3 py-3"><InfoTip title="System throughput" formula="min(Σ crusher fronts, crusher cap) + Σ stockpile fronts" align="right" /></SortHeader>
+                <SortHeader label="Plan" sortKey="planAttainment" state={state} onSort={toggle} align="right" className="px-3 py-3" />
+                <SortHeader label="Actual" sortKey="attainment" state={state} onSort={toggle} align="right" className="px-3 py-3"><InfoTip title="Actual attainment" formula="Σ tons ÷ (target tph × scheduled hrs), avg of shifts" align="right" /></SortHeader>
+                <SortHeader label="$/ton" sortKey="costPerTon" state={state} onSort={toggle} align="right" className="px-3 py-3" />
+                <SortHeader label="gal/t" sortKey="fuelGalPerTon" state={state} onSort={toggle} align="right" className="px-3 py-3" />
+                <SortHeader label="kWh/t" sortKey="kwhPerTon" state={state} onSort={toggle} align="right" className="px-3 py-3" />
+                <SortHeader label="OEE" sortKey="oee" state={state} onSort={toggle} align="right" className="px-3 py-3"><InfoTip title="Crusher OEE" formula="availability × utilization × quality" align="right" /></SortHeader>
+                <SortHeader label="Avail" sortKey="avgAvailability" state={state} onSort={toggle} align="right" className="px-3 py-3" />
+                <SortHeader label="Losses/yr" sortKey="lossesUsd" state={state} onSort={toggle} align="right" className="px-3 py-3" />
+                <SortHeader label="Excess/yr" sortKey="excess" state={state} onSort={toggle} align="right" className="px-3 py-3" />
               </tr>
             </thead>
             <tbody>
