@@ -5,12 +5,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import type { FleetUnit } from "./types";
-
-const UNITS_KEY = "fleet-tool-units-v2";
+import { api } from "./config";
 
 export const BASE_YEAR = 2026;
 export const CAPEX_HORIZON = 6;
@@ -57,6 +57,10 @@ export const SEED_UNITS: FleetUnit[] = [
 
 interface FleetStore {
   units: FleetUnit[];
+  /** Additive sync state (pages may ignore these). */
+  isLoading: boolean;
+  isSyncing: boolean;
+  error: string | null;
   addUnit: (u: FleetUnit) => void;
   updateUnit: (id: string, patch: Partial<FleetUnit>) => void;
   removeUnit: (id: string) => void;
@@ -66,45 +70,64 @@ interface FleetStore {
 
 const FleetContext = createContext<FleetStore | null>(null);
 
-function load<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback;
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function save<T>(key: string, value: T) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* storage unavailable */
-  }
-}
+const JSON_HEADERS = { "Content-Type": "application/json" };
 
 export function FleetProvider({ children }: { children: ReactNode }) {
-  const [units, setUnits] = useState<FleetUnit[]>(SEED_UNITS);
+  const [units, setUnits] = useState<FleetUnit[]>([]);
+  const [isLoading, setLoading] = useState(true);
+  const [isSyncing, setSyncing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const unitsRef = useRef<FleetUnit[]>([]);
+  unitsRef.current = units;
 
+  // Load the shared dataset from the API (scoped server-side by the user's role).
   useEffect(() => {
-    setUnits(load(UNITS_KEY, SEED_UNITS));
+    let active = true;
+    fetch(api("/api/fleet"))
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((data: FleetUnit[]) => active && setUnits(data))
+      .catch((e) => active && setError(e instanceof Error ? e.message : "Load failed"))
+      .finally(() => active && setLoading(false));
+    return () => {
+      active = false;
+    };
   }, []);
 
   const store = useMemo<FleetStore>(() => {
-    const persistUnits = (next: FleetUnit[]) => {
-      setUnits(next);
-      save(UNITS_KEY, next);
+    // Optimistic update: apply locally, fire the request, roll back on failure.
+    const mutate = (optimistic: FleetUnit[], req: () => Promise<Response>) => {
+      const prev = unitsRef.current;
+      setUnits(optimistic);
+      setSyncing(true);
+      setError(null);
+      void req()
+        .then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        })
+        .catch((e) => {
+          setUnits(prev);
+          setError(e instanceof Error ? e.message : "Sync failed");
+        })
+        .finally(() => setSyncing(false));
     };
     return {
       units,
-      addUnit: (u) => persistUnits([...units, u]),
-      updateUnit: (id, patch) => persistUnits(units.map((u) => (u.id === id ? { ...u, ...patch } : u))),
-      removeUnit: (id) => persistUnits(units.filter((u) => u.id !== id)),
-      replaceUnits: (next) => persistUnits(next),
-      resetAll: () => persistUnits(SEED_UNITS),
+      isLoading,
+      isSyncing,
+      error,
+      addUnit: (u) =>
+        mutate([...units, u], () => fetch(api("/api/fleet"), { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(u) })),
+      updateUnit: (id, patch) =>
+        mutate(units.map((u) => (u.id === id ? { ...u, ...patch } : u)), () =>
+          fetch(api(`/api/fleet/${id}`), { method: "PATCH", headers: JSON_HEADERS, body: JSON.stringify(patch) })
+        ),
+      removeUnit: (id) => mutate(units.filter((u) => u.id !== id), () => fetch(api(`/api/fleet/${id}`), { method: "DELETE" })),
+      replaceUnits: (next) =>
+        mutate(next, () => fetch(api("/api/fleet"), { method: "PUT", headers: JSON_HEADERS, body: JSON.stringify(next) })),
+      resetAll: () =>
+        mutate(SEED_UNITS, () => fetch(api("/api/fleet"), { method: "PUT", headers: JSON_HEADERS, body: JSON.stringify(SEED_UNITS) })),
     };
-  }, [units]);
+  }, [units, isLoading, isSyncing, error]);
 
   return <FleetContext.Provider value={store}>{children}</FleetContext.Provider>;
 }

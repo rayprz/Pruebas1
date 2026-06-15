@@ -108,7 +108,7 @@ const MONTERREY_CONFIG: QuarryConfig = {
   ],
 };
 
-const DEFAULT_QUARRIES: Quarry[] = [
+export const DEFAULT_QUARRIES: Quarry[] = [
   { id: "q-tepeaca", name: "Tepeaca", region: "Centro", config: TEPEACA_CONFIG, productionTons: 5_408_000, haulKm: 2.5, loaderClassId: "pl-992", truckClassId: "ht-777" },
   { id: "q-atotonilco", name: "Atotonilco", region: "Centro", config: ATOTONILCO_CONFIG, productionTons: 1_800_000, haulKm: 1.8, loaderClassId: "pl-988", truckClassId: "ht-773" },
   { id: "q-monterrey", name: "Monterrey", region: "Norte", config: MONTERREY_CONFIG, productionTons: 1_200_000, haulKm: 1.5, loaderClassId: "wl-980", truckClassId: "ht-773" },

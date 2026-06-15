@@ -71,7 +71,7 @@ function genShifts(): ShiftRecord[] {
   return out;
 }
 
-const SEED: ShiftRecord[] = genShifts();
+export const SEED: ShiftRecord[] = genShifts();
 
 interface ShiftStore {
   records: ShiftRecord[];

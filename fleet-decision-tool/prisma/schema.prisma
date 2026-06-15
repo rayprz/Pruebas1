@@ -1,0 +1,152 @@
+// Prisma schema for the Fleet Decision Tool — centralized, multi-user store.
+// Mirrors the domain types in src/lib/types.ts. Nested structures that the app
+// always reads/writes as a whole (quarry config, maintenance lines, shift
+// fronts, global params, catalog overrides) are stored as JSON to keep the API
+// and migrations tractable; everything queried/scoped is relational.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Auth & access control --------------------------------------------------
+
+enum Role {
+  VIEWER
+  EDITOR
+  ADMIN
+}
+
+enum ScopeType {
+  REGION
+  QUARRY
+}
+
+model User {
+  id           String      @id @default(cuid())
+  email        String      @unique
+  name         String
+  passwordHash String?     // null when the user authenticates via OIDC/SSO
+  role         Role        @default(VIEWER)
+  scopes       UserScope[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+/// A user with NO scopes can see all data (subject to role). A scope narrows
+/// access to specific regions and/or quarries — reusing the Quarry.region /
+/// quarryId hierarchy already in the data.
+model UserScope {
+  id     String    @id @default(cuid())
+  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  type   ScopeType
+  value  String // a region name or a quarry id
+
+  @@unique([userId, type, value])
+}
+
+// --- Business data (ids are app-meaningful strings, e.g. "ht01", "q-tepeaca") -
+
+model FleetUnit {
+  id           String   @id
+  unitNo       String
+  classId      String
+  modelId      String
+  year         Int
+  currentHours Int
+  annualHours  Int
+  availability Float
+  quarryId     String
+  status       String
+  updatedAt    DateTime @updatedAt
+
+  @@index([quarryId])
+}
+
+model FleetMonth {
+  unitId       String
+  month        String // "YYYY-MM"
+  meterHours   Int
+  availability Float
+  status       String
+  updatedAt    DateTime @updatedAt
+
+  @@id([unitId, month])
+}
+
+model MaintRecord {
+  id        String   @id
+  unitId    String
+  month     String // "YYYY-MM"
+  hours     Int
+  lines     Json // MaintLine[]
+  note      String?
+  updatedAt DateTime @updatedAt
+
+  @@index([unitId])
+  @@index([month])
+}
+
+model ShiftRecord {
+  id             String   @id
+  quarryId       String
+  date           String // "YYYY-MM-DD"
+  shift          String
+  scheduledHours Float
+  fronts         Json // ShiftFrontEntry[]
+  note           String?
+  updatedAt      DateTime @updatedAt
+
+  @@index([quarryId])
+  @@index([date])
+}
+
+model Quarry {
+  id             String   @id
+  name           String
+  region         String
+  productionTons Int
+  haulKm         Float
+  loaderClassId  String
+  truckClassId   String
+  config         Json // QuarryConfig (fronts + products + crusher/plant)
+  updatedAt      DateTime @updatedAt
+
+  @@index([region])
+}
+
+/// Singletons (one shared row each): id is always "default".
+model GlobalParams {
+  id        String   @id @default("default")
+  data      Json // GlobalParams
+  updatedAt DateTime @updatedAt
+}
+
+model CatalogOverride {
+  id        String   @id @default("default")
+  data      Json // Record<classId, Partial<EquivalenceClass>>
+  updatedAt DateTime @updatedAt
+}
+
+// --- Audit ------------------------------------------------------------------
+
+model AuditLog {
+  id       String   @id @default(cuid())
+  ts       DateTime @default(now())
+  userId   String
+  userEmail String?
+  entity   String // "fleetUnit", "maintRecord", ...
+  entityId String
+  action   String // "create" | "update" | "delete" | "bulk"
+  before   Json?
+  after    Json?
+
+  @@index([entity, entityId])
+  @@index([ts])
+}

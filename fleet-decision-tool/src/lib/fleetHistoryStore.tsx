@@ -34,7 +34,7 @@ function seedHistory(): FleetMonth[] {
   return out;
 }
 
-const SEED = seedHistory();
+export const SEED = seedHistory();
 
 interface FleetHistoryStore {
   months: FleetMonth[];

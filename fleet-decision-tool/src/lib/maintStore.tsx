@@ -104,7 +104,7 @@ function genMaint(): MaintRecord[] {
   return out;
 }
 
-const SEED: MaintRecord[] = genMaint();
+export const SEED: MaintRecord[] = genMaint();
 
 interface MaintStore {
   records: MaintRecord[];

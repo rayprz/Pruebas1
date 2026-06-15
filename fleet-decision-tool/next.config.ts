@@ -1,16 +1,11 @@
 import type { NextConfig } from "next";
 
-// When building for GitHub Pages the site is served from
-// https://<user>.github.io/pruebas1/, so it needs a base path.
-// Local dev and other hosts (e.g. Vercel) serve from the root.
-const isPages = process.env.GITHUB_PAGES === "true";
-const repoBase = "/pruebas1";
-
 const nextConfig: NextConfig = {
-  output: "export",
-  trailingSlash: true,
-  basePath: isPages ? repoBase : "",
-  assetPrefix: isPages ? `${repoBase}/` : "",
+  // Standalone server build → small, self-contained Docker image (.next/standalone
+  // ships a minimal server.js with only the files the app needs).
+  output: "standalone",
+  // We don't use next/image optimization; keep it disabled so no sharp/runtime
+  // image service is required inside the container.
   images: { unoptimized: true },
 };
 
