@@ -83,6 +83,13 @@ export const IconAlert = (p: IconProps) => (
   </svg>
 );
 
+export const IconQuarry = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <path d="M2 20h20M4 20l5-9 3 5 3-6 5 10" />
+    <path d="M9 11l1.5 2.5M15 10l-1.5 3" />
+  </svg>
+);
+
 export const IconSpark = (p: IconProps) => (
   <svg {...base} {...p}>
     <path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8" />

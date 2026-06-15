@@ -4,6 +4,7 @@ import "./globals.css";
 import { ParamsProvider } from "@/lib/store";
 import { CatalogProvider } from "@/lib/catalogStore";
 import { FleetProvider } from "@/lib/fleetStore";
+import { QuarryProvider } from "@/lib/quarryStore";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
 
@@ -34,6 +35,7 @@ export default function RootLayout({
         <ParamsProvider>
           <CatalogProvider>
           <FleetProvider>
+          <QuarryProvider>
             <div className="flex min-h-screen">
               <Sidebar />
               <div className="flex min-w-0 flex-1 flex-col">
@@ -43,6 +45,7 @@ export default function RootLayout({
                 </main>
               </div>
             </div>
+          </QuarryProvider>
           </FleetProvider>
           </CatalogProvider>
         </ParamsProvider>

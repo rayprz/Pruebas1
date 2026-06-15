@@ -99,6 +99,59 @@ export interface Site {
   truckClassId: string;
 }
 
+/** A saleable product (gradation) coming off the plant. */
+export interface QuarryProduct {
+  id: string;
+  name: string;
+  /** Share of total plant output, 0..1 */
+  mixPct: number;
+  /** Annual sales/draw, short tons */
+  demandTonsYear: number;
+  /** Current stockpile, short tons */
+  stockpileTons: number;
+}
+
+/** Full operating assumptions for one aggregates quarry. */
+export interface QuarryConfig {
+  // Calendar / time
+  shiftsPerDay: number;
+  hoursPerShift: number;
+  daysPerYear: number;
+  /** Productive fraction of scheduled time (delays, blasting, shift change) */
+  operatingEfficiency: number;
+  // Loading
+  loaderClassId: string;
+  nLoaders: number;
+  loaderCycleSec: number;
+  passesPerTruck: number;
+  bucketFillFactor: number;
+  // Hauling
+  truckClassId: string;
+  nTrucks: number;
+  haulKm: number;
+  loadedSpeedKmh: number;
+  emptySpeedKmh: number;
+  spotDumpSec: number;
+  truckAvailability: number;
+  // Crusher / plant
+  crusherRatedTph: number;
+  crusherAvailability: number;
+  kwhPerTon: number;
+  energyPriceUsdKwh: number;
+  linerCostPerTon: number;
+  plantOtherPerTon: number;
+  // Other cost
+  drillBlastCostPerTon: number;
+  // Targets & actuals
+  targetTonsYear: number;
+  /** Optional measured production; when set, used as the "real" side */
+  actualTonsYear?: number;
+  // Quality
+  outOfSpecPct: number;
+  // Products
+  products: QuarryProduct[];
+}
+
 export interface EquipmentModel {
   id: string;
   brand: Brand;

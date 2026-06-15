@@ -7,6 +7,7 @@ import {
   IconCapex,
   IconCatalog,
   IconCompare,
+  IconQuarry,
   IconSites,
   IconTruck,
 } from "./Icons";
@@ -26,6 +27,7 @@ const GROUPS: {
     heading: "My Operation",
     items: [
       { href: "/fleet", label: "My Fleet", Icon: IconTruck },
+      { href: "/quarry", label: "Quarry Performance", Icon: IconQuarry },
       { href: "/capex", label: "CAPEX Planner", Icon: IconCapex },
       { href: "/sites", label: "Sites & Production", Icon: IconSites },
     ],
