@@ -57,7 +57,7 @@ export default function QuarriesPage() {
         id="quarries"
         purpose="The registry of every quarry/site in the operation, with its region and the coarse sizing inputs used by Sites & Production and the rollups."
         edit="Name, region, annual production target, representative haul distance, and representative loader/truck class. The detailed fronts/crusher model is edited in Quarry Performance."
-        output="A clean two-level hierarchy (Región → Cantera) that feeds the active-quarry selector, the Executive Dashboard and Compare Quarries."
+        output="A clean two-level hierarchy (Region → Quarry) that feeds the active-quarry selector, the Executive Dashboard and Compare Quarries."
         connects="Each quarry owns its fleet (My Fleet quarryId), its shift log, and its detailed model. Region drives the dashboard subtotals."
       />
 

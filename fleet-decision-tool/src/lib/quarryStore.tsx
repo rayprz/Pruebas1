@@ -10,7 +10,7 @@ import {
 } from "react";
 import type { Quarry, QuarryConfig, QuarryFront, QuarryProduct } from "./types";
 
-const KEY = "fleet-tool-quarries-v1";
+const KEY = "fleet-tool-quarries-v2";
 
 // --- Detailed model configs per quarry ------------------------------------
 
@@ -109,9 +109,9 @@ const MONTERREY_CONFIG: QuarryConfig = {
 };
 
 const DEFAULT_QUARRIES: Quarry[] = [
-  { id: "q-tepeaca", name: "Quarry 1", region: "Centro", config: TEPEACA_CONFIG, productionTons: 5_408_000, haulKm: 2.5, loaderClassId: "pl-992", truckClassId: "ht-777" },
-  { id: "q-atotonilco", name: "Quarry 2", region: "Centro", config: ATOTONILCO_CONFIG, productionTons: 1_800_000, haulKm: 1.8, loaderClassId: "pl-988", truckClassId: "ht-773" },
-  { id: "q-monterrey", name: "Quarry 3", region: "Norte", config: MONTERREY_CONFIG, productionTons: 1_200_000, haulKm: 1.5, loaderClassId: "wl-980", truckClassId: "ht-773" },
+  { id: "q-tepeaca", name: "Quarry 1", region: "Central", config: TEPEACA_CONFIG, productionTons: 5_408_000, haulKm: 2.5, loaderClassId: "pl-992", truckClassId: "ht-777" },
+  { id: "q-atotonilco", name: "Quarry 2", region: "Central", config: ATOTONILCO_CONFIG, productionTons: 1_800_000, haulKm: 1.8, loaderClassId: "pl-988", truckClassId: "ht-773" },
+  { id: "q-monterrey", name: "Quarry 3", region: "North", config: MONTERREY_CONFIG, productionTons: 1_200_000, haulKm: 1.5, loaderClassId: "wl-980", truckClassId: "ht-773" },
 ];
 
 const CONFIG_BY_ID: Record<string, QuarryConfig> = {

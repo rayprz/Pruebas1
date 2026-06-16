@@ -219,7 +219,7 @@ export interface QuarryConfig {
 
 /** A quarry = a site: the top-level operation. Owns its detailed performance
  *  model (config), plus coarse sizing inputs reused by Sites & Production.
- *  Grouped by region for VP-level rollups (Región → Cantera). */
+ *  Grouped by region for VP-level rollups (Region → Quarry). */
 export interface Quarry {
   id: string;
   name: string;
