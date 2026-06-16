@@ -20,7 +20,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
     && rm -rf /var/lib/apt/lists/*
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-ENV NEXT_TELEMETRY_DISABLED=1
+# DOCKER_BUILD=true makes next.config emit the standalone server bundle.
+ENV NEXT_TELEMETRY_DISABLED=1 DOCKER_BUILD=true
 RUN npm run build
 
 # --- runner: minimal runtime image (app only) -------------------------------
