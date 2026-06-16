@@ -201,7 +201,7 @@ export default function DashboardPage() {
               {byRegion.map((rg) => (
                 <Fragment key={rg.region}>
                   <tr className="border-b border-line bg-panel/40 text-[11px] uppercase tracking-[0.1em] text-inksoft">
-                    <td className="px-5 py-1.5 font-semibold" colSpan={2}>Región {rg.region}</td>
+                    <td className="px-5 py-1.5 font-semibold" colSpan={2}>Region {rg.region}</td>
                     <td className="px-3 py-1.5 text-right tabular">{Math.round(rg.systemTph).toLocaleString()}</td>
                     <td className="px-3 py-1.5 text-right tabular">{(rg.attainment * 100).toFixed(0)}%</td>
                     <td className="px-3 py-1.5" />
