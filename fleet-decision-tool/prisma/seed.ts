@@ -20,6 +20,13 @@ import { DEFAULT_PARAMS } from "../src/data/catalog";
 const prisma = new PrismaClient();
 
 async function main() {
+  // Run-once bootstrap: if the DB is already seeded (a user exists), skip — so
+  // it's safe to call on every deploy. Set SEED_FORCE=true to reseed anyway.
+  if (process.env.SEED_FORCE !== "true" && (await prisma.user.count()) > 0) {
+    console.log("DB already seeded (users exist). Skipping. Set SEED_FORCE=true to reseed.");
+    return;
+  }
+
   // --- Admin user ---------------------------------------------------------
   const email = process.env.SEED_ADMIN_EMAIL ?? "admin@example.com";
   const password = process.env.SEED_ADMIN_PASSWORD ?? "change-me";
