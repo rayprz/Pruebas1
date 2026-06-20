@@ -1,3 +1,8 @@
 
 # Next.js build output
 fleet-decision-tool/out/
+tortilleria-tool/.next/
+tortilleria-tool/node_modules/
+
+# Claude Code internal
+.claude/
