@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   IconDashboard,
+  IconPOS,
   IconProduccion,
   IconVentas,
   IconClientes,
@@ -27,6 +28,7 @@ const GROUPS: { heading: string; items: { href: string; label: string; Icon: Ico
   {
     heading: "Operación Diaria",
     items: [
+      { href: "/pos", label: "Punto de Venta", Icon: IconPOS },
       { href: "/produccion", label: "Producción", Icon: IconProduccion },
       { href: "/ventas", label: "Ventas", Icon: IconVentas },
     ],

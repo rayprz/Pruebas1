@@ -40,6 +40,17 @@ export const IconVentas = (p: P) => (
   </svg>
 );
 
+export const IconPOS = (p: P) => (
+  <svg {...base(p)}>
+    <rect x="4" y="3" width="16" height="13" rx="1" />
+    <path d="M8 7h8" />
+    <path d="M8 11h5" />
+    <path d="M3 20h18" />
+    <path d="M7 16v4" />
+    <path d="M17 16v4" />
+  </svg>
+);
+
 export const IconClientes = (p: P) => (
   <svg {...base(p)}>
     <circle cx="12" cy="8" r="4" />
