@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@theme {
+  /* Surfaces */
+  --color-canvas: #f4efe5;
+  --color-panel: #efe7d8;
+  --color-card: #fffdf9;
+  --color-line: #e8dfcd;
+  --color-line-strong: #ddd1bb;
+
+  /* Ink */
+  --color-ink: #2a2620;
+  --color-inksoft: #6c6356;
+  --color-inkfaint: #a89e8c;
+
+  /* Accents */
+  --color-accent: #b06a3c;
+  --color-accentink: #93532b;
+  --color-accentsoft: #f1e2d4;
+  --color-olive: #6f7548;
+  --color-olivesoft: #e7e7d3;
+  --color-blue: #5b7c8a;
+  --color-gold: #c08a44;
+  --color-pink: #b07a8c;
+  --color-danger: #b1492f;
+  --color-dangersoft: #f3ddd4;
+
+  /* Fonts (wired to next/font variables) */
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+}
+
+html {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Elegant serif display for headings and big figures */
+.font-display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Subtle scrollbars to match the warm theme */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+
+/* Clean print / Save-as-PDF: drop the app chrome, keep the report */
+@media print {
+  aside,
+  header {
+    display: none !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+}
