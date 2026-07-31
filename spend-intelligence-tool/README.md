@@ -12,10 +12,12 @@ stack and design system — but adds a small server route for the AI classifier.
 1. **Local rules engine** (`src/lib/classifier.ts`) scores each transaction against
    the taxonomy's keywords + learned vendor mappings → category/subcategory +
    confidence. Free and instant.
-2. **High confidence** rows auto-classify.
-3. **Low confidence** rows (below the editable threshold) are sent, batched, to the
-   **`/api/classify`** server route, which asks Claude to pick from the *same*
-   taxonomy and returns category/subcategory + confidence + rationale.
+2. **High confidence** rows (at/above the editable threshold) are accepted as-is.
+3. **Low confidence** rows (no confident rule match) fall back to the external AI:
+   they are sent, batched, to the **`/api/classify`** server route, which asks Claude
+   to pick from the *same* taxonomy and returns category/subcategory + confidence +
+   rationale. This escalation runs automatically after import (toggle on the Import
+   page) or on demand via the "Send to AI" button.
 4. **Manual corrections** are remembered per vendor and improve future imports.
 
 ## Pages
